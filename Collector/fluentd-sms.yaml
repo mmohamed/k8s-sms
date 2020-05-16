@@ -1,0 +1,86 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sms-config
+  namespace: kube-sms
+data:
+  fluentd: |
+    <source>
+      @type syslog
+      port 5140
+      bind 0.0.0.0
+      tag system
+    </source>
+    <match system.local7.*>
+      @type sql
+      host db-service.kube-sms.svc.cluster.local
+      port 3306
+      database logs
+      adapter mysql2
+      username mysql
+      password mysql
+      <table>
+        column_mapping 'timestamp:created_at,host:host,ident:ident,message:message'
+        table access
+      </table>
+      <table system.local6.*>
+        column_mapping 'timestamp:created_at,host:host,ident:ident,message:message'
+        table error
+      </table>
+    </match>
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fluentd
+  namespace: kube-sms
+spec:
+  selector:
+    matchLabels:
+      app: fluentd
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: fluentd
+    spec:
+      containers:
+      - name: fluentd
+        image: medinvention/fluentd-armhf #fluent/fluentd:edge-debian-armhf
+        imagePullPolicy: Always
+        command: ['fluentd', '-c', '/fluentd/etc/smsfluentd.conf', '-v']
+        ports:
+          - containerPort: 5140
+        volumeMounts:
+          - name: config-volume
+            mountPath: /fluentd/etc/smsfluentd.conf
+            subPath: fluentd
+          - name: data-volume
+            mountPath: /fluentd/log
+      volumes:
+        - name: config-volume
+          configMap:
+            name: sms-config
+        - name: data-volume
+          emptyDir: {}
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: fluentd-service
+  namespace: kube-sms
+spec:
+  ports:
+  - name: syslog-udp
+    port: 5140
+    targetPort: 5140
+    protocol: UDP
+  - name: syslog-tcp
+    port: 5140
+    targetPort: 5140
+    protocol: TCP
+  selector:
+    app: fluentd

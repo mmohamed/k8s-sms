@@ -1,0 +1,136 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: init-files
+  namespace: kube-sms
+data:
+  db: |
+    DROP TABLE IF EXISTS registration;
+    CREATE TABLE registration (
+      id INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+      host VARCHAR(255) NOT NULL,
+      namespace VARCHAR(255) NOT NULL,
+      pod VARCHAR(255) NOT NULL,
+      ip VARCHAR(15) NOT NULL,
+      endpoint VARCHAR(15) DEFAULT NULL,
+      active BOOLEAN DEFAULT TRUE,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT NULL
+    );
+    CREATE INDEX selectidx ON registration(host, namespace);
+    DROP TABLE IF EXISTS access;
+    CREATE TABLE access (
+      id INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+      host VARCHAR(255) NOT NULL,
+      ident VARCHAR(30) NOT NULL,
+      message TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    DROP TABLE IF EXISTS error;
+    CREATE TABLE error (
+      id INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+      host VARCHAR(255) NOT NULL,
+      ident VARCHAR(30) NOT NULL,
+      message TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+---
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dbsecret
+  namespace: kube-sms
+type: Opaque
+data:
+  rootpassword: bXlzcWw=
+  username: bXlzcWw=
+  password: bXlzcWw=
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: db-service
+  namespace: kube-sms
+spec:
+  ports:
+  - port: 3306
+  selector:
+    app: db
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: db-pv-claim
+  namespace: kube-sms
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 2Gi
+  
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db
+  namespace: kube-sms
+spec:
+  selector:
+    matchLabels:
+      app: db
+  template:
+    metadata:
+      labels:
+        app: db
+    spec:
+      containers:
+        - image: medinvention/mysql:arm
+          name: mysql
+          resources:
+            requests:
+              memory: 64Mi
+              cpu: 250m
+            limits:
+              memory: 128Mi
+              cpu: 500m
+          env:
+            - name: MYSQL_DATABASE
+              value: logs
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: dbsecret
+                  key: username
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: dbsecret
+                  key: password
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: dbsecret
+                  key: rootpassword
+          ports:
+            - containerPort: 3306
+          lifecycle:
+            postStart:
+              exec:
+                command: ['/bin/sh', '-c', 'nohup sleep 30 && mysql logs -uroot -p"$MYSQL_ROOT_PASSWORD" < /var/db.sql > /tmp/db.log &']
+          volumeMounts:
+            - name: db-persistent-storage
+              mountPath: /var/lib/mysql
+            - name: config-volume
+              mountPath: /var/db.sql
+              subPath: db
+      volumes:
+        - name: db-persistent-storage
+          persistentVolumeClaim:
+            claimName: db-pv-claim
+        - name: config-volume
+          configMap:
+            name: init-files

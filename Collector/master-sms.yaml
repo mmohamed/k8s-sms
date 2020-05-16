@@ -1,0 +1,112 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: server-api
+  namespace: kube-sms
+data:
+  server: |
+    from flask import Flask, json
+    from mysql.connector import MySQLConnection, Error
+    import os
+
+    api = Flask(__name__)
+    
+    @api.route('/register', methods=['POST'])
+    def register():
+      content = request.json
+      db = connect()
+      if db != None:
+        cursor = db.cursor()
+        cursor.execute("INSERT INTO registration (host, name, namespace, ip, endpoint) VALUES (%s, %s)", (content['host'], content['name'], content['namespace'], content['ip'], content['endpoint']))
+        db.commit()
+      else:
+        return json.dumps({"status": False, "message": "Unable to connect to master db"})
+      return json.dumps({"status": True, "message": "OK"})
+    
+    @api.route('/unregister', methods=['POST'])
+    def unregister():
+      content = request.json
+      db = connect()
+      if db != None:
+        cursor = db.cursor()
+        cursor.execute("UPDATE registration SET active = FALSE, updated_at = NOW() WHERE host = %s AND namespace = %s", (content['host'], content['namespace']))
+        db.commit()
+      else:
+        return json.dumps({"status": False, "message": "Unable to connect to master db"})
+      if cursor.rowcount > 0:
+        return json.dumps({"status": True, "message": "OK"})
+      return json.dumps({"status": False, "message": "Unable to find pod"})
+    
+    def connect():
+      if conn != None and conn.is_connected():
+        return conn
+      conn = None
+      try:
+          conn = mysql.connector.connect(host=os.environ["DB_HOST"], database=os.environ["DB_NAME"], user=os.environ["DB_USER"],password=os.environ["DB_PASSWORD"])
+          if conn.is_connected():
+              return conn
+          return None
+      except Error as e:
+        return None
+
+    if __name__ == '__main__':
+      api.run()
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: master
+  namespace: kube-sms
+spec:
+  selector:
+    matchLabels:
+      run: master
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        run: master
+    spec:
+      containers:
+      - name: server
+        image: python
+        command: ['sh', '-c', 'pip install flask mysql-connector-python && python /var/static/server']
+        env:
+          - name: DB_NAME
+            value: logs
+          - name: DB_HOST
+            value: db-service.kube-sms.svc.cluster.local
+          - name: DB_USER
+            valueFrom:
+              secretKeyRef:
+                name: dbsecret
+                key: username
+          - name: DB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: dbsecret
+                key: password
+        ports:
+          - containerPort: 5000
+        volumeMounts:
+          - name: static-volume
+            mountPath: /var/static
+      volumes:
+        - name: static-volume
+          configMap:
+            name: server-api
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: master-service
+  namespace: kube-sms
+spec:
+  ports:
+  - name: http
+    port: 80
+    targetPort: 5000
+  selector:
+    run: master
