@@ -5,19 +5,21 @@ metadata:
   namespace: kube-sms
 data:
   server: |
-    from flask import Flask, json
-    from mysql.connector import MySQLConnection, Error
+    from flask import Flask, json, request
+    import mysql.connector
+    from mysql.connector import Error
     import os
 
     api = Flask(__name__)
-    
+    conn = None
+
     @api.route('/register', methods=['POST'])
     def register():
       content = request.json
       db = connect()
       if db != None:
         cursor = db.cursor()
-        cursor.execute("INSERT INTO registration (host, name, namespace, ip, endpoint) VALUES (%s, %s)", (content['host'], content['name'], content['namespace'], content['ip'], content['endpoint']))
+        cursor.execute("INSERT INTO registration (host, pod, namespace, ip, endpoint) VALUES (%s, %s, %s, %s, %s)", (content['host'], content['name'], content['namespace'], content['ip'], content['endpoint']))
         db.commit()
       else:
         return json.dumps({"status": False, "message": "Unable to connect to master db"})
@@ -38,6 +40,7 @@ data:
       return json.dumps({"status": False, "message": "Unable to find pod"})
     
     def connect():
+      global conn
       if conn != None and conn.is_connected():
         return conn
       conn = None
@@ -50,7 +53,7 @@ data:
         return None
 
     if __name__ == '__main__':
-      api.run()
+      api.run(host='0.0.0.0')
 ---
 
 apiVersion: apps/v1

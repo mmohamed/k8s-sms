@@ -15,7 +15,7 @@ data:
       endpoint VARCHAR(15) DEFAULT NULL,
       active BOOLEAN DEFAULT TRUE,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT NULL
+      updated_at TIMESTAMP
     );
     CREATE INDEX selectidx ON registration(host, namespace);
     DROP TABLE IF EXISTS access;
@@ -120,7 +120,7 @@ spec:
           lifecycle:
             postStart:
               exec:
-                command: ['/bin/sh', '-c', 'nohup sleep 30 && mysql logs -uroot -p"$MYSQL_ROOT_PASSWORD" < /var/db.sql > /tmp/db.log &']
+                command: ['/bin/sh', '-c', 'sleep 30 && mysql logs -uroot -p"$MYSQL_ROOT_PASSWORD" < /var/db.sql > /tmp/db.log &']
           volumeMounts:
             - name: db-persistent-storage
               mountPath: /var/lib/mysql

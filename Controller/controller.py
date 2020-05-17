@@ -182,6 +182,10 @@ def setProxyConfigMap(name, namespace, filename, port):
         },
         "data": {
             filename: """
+            log_format info '$remote_addr - $remote_user [$time_local] '
+                        '"$request" $status $body_bytes_sent '
+                        '"$http_referer" "$http_user_agent" - '
+                        'rt=$request_time uct=$upstream_connect_time uht=$upstream_header_time urt=$upstream_response_time';
             server {
               listen 80;
               location / {
@@ -190,6 +194,8 @@ def setProxyConfigMap(name, namespace, filename, port):
                   proxy_set_header X-Real-IP $remote_addr;
                   proxy_pass http://localhost:"""+str(port)+""";
               }
+              error_log  syslog:server=fluentd-service.kube-sms.svc.cluster.local:5140,facility=local6,tag=system,severity=debug info;
+              access_log syslog:server=fluentd-service.kube-sms.svc.cluster.local:5140,facility=local7,tag=system,severity=info info;
             }"""
         }
     }
