@@ -196,7 +196,17 @@ def setProxyConfigMap(name, namespace, filename, port):
               }
               error_log  syslog:server=fluentd-service.kube-sms.svc.cluster.local:5140,facility=local6,tag=system,severity=debug info;
               access_log syslog:server=fluentd-service.kube-sms.svc.cluster.local:5140,facility=local7,tag=system,severity=info info;
-            }"""
+            }""",
+            register: """
+            data="{'host': '$HOSTNAME', 'name': '$POD_NAME', 'namespace': '$POD_NAMESPACE', 'ip': '$POD_IP', 'endpoint': '$APP_SERVICE_SERVICE_HOST'}"
+            data=$(echo $data | sed "s/'/\"/g")
+            curl -S -X POST http://master-service.kube-sms.svc.cluster.local/register -H "Content-Type: application/json" -d "$data"
+            """
+            unregister: """
+            data="{'host': '$HOSTNAME', 'name': '$POD_NAME', 'namespace': '$POD_NAMESPACE', 'ip': '$POD_IP', 'endpoint': '$APP_SERVICE_SERVICE_HOST'}"
+            data=$(echo $data | sed "s/'/\"/g")
+            curl -S -X POST http://master-service.kube-sms.svc.cluster.local/unregister -H "Content-Type: application/json" -d "$data"
+            """
         }
     }
   try:
