@@ -1,4 +1,4 @@
-import createEngine, { DefaultNodeModel, DiagramModel} from '@projectstorm/react-diagrams';
+import createEngine, { DagreEngine, PathFindingLinkFactory, DefaultNodeModel, DiagramModel} from '@projectstorm/react-diagrams';
 import React from 'react';
 import { CanvasWidget} from '@projectstorm/react-canvas-core';
 import BaseWidget from './BaseWidget'
@@ -8,6 +8,7 @@ import {ArrowsLinkFactory, ArrowsPortModel} from './ArrowsLink'
 function App() {
 
   const engine = createEngine();
+
   engine.getLinkFactories().registerFactory(new AdvancedLinkFactory());
   engine.getLinkFactories().registerFactory(new ArrowsLinkFactory());
 
@@ -53,6 +54,21 @@ function App() {
   model.addAll(node1, node2, link);
   model.addAll(node3, node4, arrowsLink);
   engine.setModel(model);
+
+  setTimeout(function(){
+    const dagre = new DagreEngine({
+      graph: {
+        rankdir: 'LR',
+        ranker: 'longest-path',
+        marginx: 100,
+        marginy: 100
+      },
+      includeLinks: true
+    });
+    dagre.redistribute(model);
+    engine.getLinkFactories().getFactory(PathFindingLinkFactory.NAME).calculateRoutingMatrix();
+    engine.repaintCanvas();
+  }, 5000);
 
   return (
     <BaseWidget>
