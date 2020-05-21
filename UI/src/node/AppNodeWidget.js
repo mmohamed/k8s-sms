@@ -1,6 +1,6 @@
 import * as React from 'react';
 import styled from '@emotion/styled';
-import { DefaultPortLabel } from '@projectstorm/react-diagrams';
+import { ArcherContainer, ArcherElement } from 'react-archer';
 import { AppPortLabel } from '../port/AppPortLabel';
 
 export const Node = styled.div`
@@ -46,9 +46,23 @@ export const PortsContainer = styled.div`
     }
 `;
 
+export const PortsContainerSeparator = styled.div`
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    width: 100px;
+`;
+
 
 export class AppNodeWidget extends React.Component {
 	render() {
+        const relations = [];
+
+        this.props.node.getOutPorts().map(port => {
+            let relation = {targetId: port.getID(), sourceAnchor: 'right', targetAnchor: 'left'};
+            relations.push(relation);
+        }); 
+
 		return (
 			<Node
 				data-default-node-name={this.props.node.getOptions().name}
@@ -57,14 +71,17 @@ export class AppNodeWidget extends React.Component {
 				<Title>
 					<TitleName>{this.props.node.getOptions().name}</TitleName>
 				</Title>
-				<Ports>
-                    <PortsContainer>{ this.props.node.getInPorts().map(port => (
-                        <AppPortLabel engine={this.props.engine} port={port} key={port.getID()} />
-                    ))}</PortsContainer>
-                    <PortsContainer>{ this.props.node.getOutPorts().map(port => (
-                        <AppPortLabel engine={this.props.engine} port={port} key={port.getID()} />
-                    ))}</PortsContainer>
-				</Ports>
+                <ArcherContainer strokeColor='red'>
+                    <Ports>
+                        <PortsContainer>{ this.props.node.getInPorts().map(port => (
+                            <AppPortLabel engine={this.props.engine} port={port} key={port.getID()} relations={relations} />
+                        ))}</PortsContainer>
+                        <PortsContainerSeparator/>
+                        <PortsContainer>{ this.props.node.getOutPorts().map(port => (
+                            <AppPortLabel engine={this.props.engine} port={port} key={port.getID()} relations={[]} />
+                        ))}</PortsContainer>
+                    </Ports>
+                </ArcherContainer>
 			</Node>
 		);
 	}

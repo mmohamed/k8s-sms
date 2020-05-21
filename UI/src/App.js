@@ -42,36 +42,64 @@ function App() {
   node3.setPosition(100, 300);
   let port3 = node3.addPort(new ArrowsPortModel(false, 'Out'));
 
-  // node 4
-  const node4 = new DefaultNodeModel({
-    name: 'Node 4',
+
+
+
+
+
+
+
+
+
+
+
+
+
+  // Product
+  let product = new AppNodeModel({
+    name: 'Product View',
     color: 'rgb(192,255,0)',
   });
-  node4.setPosition(400, 300);
-  let port4 = node4.addPort(new ArrowsPortModel(true, 'In'));
-  let port5 = node4.addPort(new AdvancedPortModel(false, 'Ingress'));
-
-  // link them and add a label to the link
-  const arrowsLink = port3.link(port4);
-
-  const app = new AppNodeModel({
-    'name': 'Application',
+  product.setPosition(100, 300);
+  let outProductPortV1 = product.addPort(new AdvancedPortModel(false, 'V1', 'Master*'));
+  // details
+  let detail = new AppNodeModel({
+    name: 'Details Bloc',
+    color: 'rgb(192,255,0)',
+  });
+  detail.setPosition(400, 150);
+  let inDetailPort = detail.addPort(new AdvancedPortModel(true, 'IN'));
+  let outDetailPortV1 = detail.addPort(new AdvancedPortModel(false, 'V1', 'V1'));
+  // Review
+  let review = new AppNodeModel({
+    'name': 'Review bloc',
     color: 'rgb(0,192,255)',
   });
-  app.setPosition(700, 350);
-  let inAppPort = app.addPort(new AdvancedPortModel(true, 'Sidecare'));
-  let outAppPortV1 = app.addPort(new AdvancedPortModel(false, 'V1', 'V1'));
-  let outAppPortV2 = app.addPort(new AdvancedPortModel(false, 'V2', 'V2'));
-  let outAppPortV3 = app.addPort(new AdvancedPortModel(false, 'V3', 'V3'));
-  let outAppPortV4 = app.addPort(new AdvancedPortModel(false, 'V4', 'V4'));
-  let outAppPortV5 = app.addPort(new AdvancedPortModel(false, 'V5', 'V5'));
-  let ingressLink = port5.link(inAppPort);
+  review.setPosition(400, 350);
+  let inReviewPort = review.addPort(new AdvancedPortModel(true, 'Sidecare'));
+  let outReviewPortV1 = review.addPort(new AdvancedPortModel(false, 'V1', 'V1'));
+  let outReviewPortV2 = review.addPort(new AdvancedPortModel(false, 'V2', 'V2'));
+  let outReviewPortV3 = review.addPort(new AdvancedPortModel(false, 'V3', 'V3'));
+  // Rating
+  let rating = new AppNodeModel({
+    'name': 'Rating bloc',
+    color: 'rgb(0,192,255)',
+  });
+  rating.setPosition(700, 350);
+  let inRatingPort = rating.addPort(new AdvancedPortModel(true, 'Sidecare'));
+  let outRatingPortV1 = rating.addPort(new AdvancedPortModel(false, 'V1', 'V1'));
+  let outRatingPortV2 = rating.addPort(new AdvancedPortModel(false, 'V2', 'V2'));
+  let outRatingPortV2Mysql = rating.addPort(new AdvancedPortModel(false, 'V2MYSQL', 'V2-Mysql'));
 
+
+  let detailLink = outProductPortV1.link(inDetailPort);
+  let reviewLink = outProductPortV1.link(inReviewPort);
+  let ratingLinkV2 = outReviewPortV2.link(inRatingPort);
+  let ratingLinkV3 = outReviewPortV3.link(inRatingPort);
+  
   const model = new DiagramModel();
-  model.addAll(node1, node2, link);
-  model.addAll(node3, node4, arrowsLink);
-
-  model.addAll(app, inAppPort, outAppPortV1, outAppPortV2, outAppPortV3, outAppPortV4, outAppPortV5, ingressLink);
+  model.addAll(product, detail, review, rating);
+  model.addAll(detailLink, reviewLink, ratingLinkV2, ratingLinkV3);
 
   engine.setModel(model);
 

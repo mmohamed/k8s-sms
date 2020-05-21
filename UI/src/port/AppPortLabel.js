@@ -1,6 +1,7 @@
 import * as React from 'react';
 import styled from '@emotion/styled';
 import { PortWidget } from '@projectstorm/react-diagrams';
+import { ArcherElement } from 'react-archer';
 
 export const PortLabel = styled.div`
     display: flex;
@@ -36,7 +37,6 @@ export const LabelOut = styled.div`
     border-radius: 5px;
     padding: 5px;
     border: 1px solid white;
-    margin-left: 100px;
 `;
 
 export const Port = styled.div`
@@ -52,8 +52,8 @@ export class AppPortLabel extends React.Component {
 	render() {
 		const port = (
 			<PortWidget engine={this.props.engine} port={this.props.port}>
-				<Port />
-			</PortWidget>
+               	<Port />
+            </PortWidget>
 		);
         
         let label, out;
@@ -71,7 +71,6 @@ export class AppPortLabel extends React.Component {
 			</PortLabelIn>)
         }
 
-
-		return (out);
+		return (<ArcherElement id={this.props.port.getID()} relations={this.props.relations}>{out}</ArcherElement>);
 	}
 }
