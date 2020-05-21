@@ -2,8 +2,10 @@ import createEngine, { DagreEngine, PathFindingLinkFactory, DefaultNodeModel, Di
 import React from 'react';
 import { CanvasWidget} from '@projectstorm/react-canvas-core';
 import BaseWidget from './BaseWidget'
-import {AdvancedLinkFactory, AdvancedPortModel} from './AdvancedLink'
+import {AdvancedLinkFactory, AdvancedPortModel, AdvancedLinkModel} from './AdvancedLink'
 import {ArrowsLinkFactory, ArrowsPortModel} from './ArrowsLink'
+import { AppNodeFactory } from './node/AppNodeFactory';
+import { AppNodeModel } from './node/AppNodeModel';
 
 function App() {
 
@@ -11,6 +13,7 @@ function App() {
 
   engine.getLinkFactories().registerFactory(new AdvancedLinkFactory());
   engine.getLinkFactories().registerFactory(new ArrowsLinkFactory());
+  engine.getNodeFactories().registerFactory(new AppNodeFactory());
 
   // node 1
   const node1 = new DefaultNodeModel({
@@ -46,16 +49,33 @@ function App() {
   });
   node4.setPosition(400, 300);
   let port4 = node4.addPort(new ArrowsPortModel(true, 'In'));
+  let port5 = node4.addPort(new AdvancedPortModel(false, 'Ingress'));
 
   // link them and add a label to the link
   const arrowsLink = port3.link(port4);
 
+  const app = new AppNodeModel({
+    'name': 'Application',
+    color: 'rgb(0,192,255)',
+  });
+  app.setPosition(700, 350);
+  let inAppPort = app.addPort(new AdvancedPortModel(true, 'Sidecare'));
+  let outAppPortV1 = app.addPort(new AdvancedPortModel(false, 'V1', 'V1'));
+  let outAppPortV2 = app.addPort(new AdvancedPortModel(false, 'V2', 'V2'));
+  let outAppPortV3 = app.addPort(new AdvancedPortModel(false, 'V3', 'V3'));
+  let outAppPortV4 = app.addPort(new AdvancedPortModel(false, 'V4', 'V4'));
+  let outAppPortV5 = app.addPort(new AdvancedPortModel(false, 'V5', 'V5'));
+  let ingressLink = port5.link(inAppPort);
+
   const model = new DiagramModel();
   model.addAll(node1, node2, link);
   model.addAll(node3, node4, arrowsLink);
+
+  model.addAll(app, inAppPort, outAppPortV1, outAppPortV2, outAppPortV3, outAppPortV4, outAppPortV5, ingressLink);
+
   engine.setModel(model);
 
-  setTimeout(function(){
+  /*setTimeout(function(){
     const dagre = new DagreEngine({
       graph: {
         rankdir: 'LR',
@@ -68,7 +88,7 @@ function App() {
     dagre.redistribute(model);
     engine.getLinkFactories().getFactory(PathFindingLinkFactory.NAME).calculateRoutingMatrix();
     engine.repaintCanvas();
-  }, 5000);
+  }, 5000);*/
 
   return (
     <BaseWidget>
