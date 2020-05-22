@@ -1,6 +1,6 @@
 import * as React from 'react';
 import styled from '@emotion/styled';
-import { ArcherContainer, ArcherElement } from 'react-archer';
+import { ArcherContainer } from 'react-archer';
 import { AppPortLabel } from '../port/AppPortLabel';
 
 export const Node = styled.div`
@@ -61,6 +61,7 @@ export class AppNodeWidget extends React.Component {
         this.props.node.getOutPorts().map(port => {
             let relation = {targetId: port.getID(), sourceAnchor: 'right', targetAnchor: 'left'};
             relations.push(relation);
+            return relation;
         }); 
 
 		return (
