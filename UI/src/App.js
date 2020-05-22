@@ -2,7 +2,7 @@ import createEngine, { DagreEngine, PathFindingLinkFactory, DefaultNodeModel, Di
 import React from 'react';
 import { CanvasWidget} from '@projectstorm/react-canvas-core';
 import BaseWidget from './BaseWidget'
-import {AdvancedLinkFactory, AdvancedPortModel, AdvancedLinkModel} from './link/AdvancedLink'
+import {AdvancedLinkFactory, AdvancedPortModel, AdvancedLinkModel, DisabledAdvancedPortModel} from './link/AdvancedLink'
 import {ArrowsLinkFactory, ArrowsPortModel} from './link/ArrowsLink'
 import { AppNodeFactory } from './node/AppNodeFactory';
 import { AppNodeModel } from './node/AppNodeModel';
@@ -30,7 +30,7 @@ function App() {
     color: 'rgb(192,255,0)',
   });
   //detail.setPosition(400, 150);
-  let inDetailPort = detail.addPort(new AdvancedPortModel(true, 'IN'));
+  let inDetailPort = detail.addPort(new DisabledAdvancedPortModel(true, 'IN'));
   let outDetailPortV1 = detail.addPort(new AdvancedPortModel(false, 'V1', 'V1'));
   // Review
   let review = new AppNodeModel({

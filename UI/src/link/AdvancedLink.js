@@ -5,7 +5,8 @@ export class AdvancedLinkModel extends DefaultLinkModel {
 	constructor() {
 		super({
 			type: 'advanced',
-			width: 10
+			width: 10,
+			color: 'rgba(255,0,0,0.5)'
 		});
 	}
 }
@@ -14,6 +15,10 @@ export class AdvancedPortModel extends DefaultPortModel {
 	createLinkModel(){
 		return new AdvancedLinkModel();
 	}
+}
+
+export class DisabledAdvancedPortModel extends AdvancedPortModel {
+
 }
 
 export class AdvancedLinkSegment extends React.Component {
@@ -27,12 +32,21 @@ export class AdvancedLinkSegment extends React.Component {
 	constructor(props) {
 		super(props);
 		this.percent = 0;
+		if(this.props.model.sourcePort instanceof DisabledAdvancedPortModel || this.props.model.targetPort instanceof  DisabledAdvancedPortModel){
+			this.percent = -1;
+			props.model.getOptions().width = 6;
+			props.model.getOptions().color = 'gray';
+		}
 	}
 
 	componentDidMount() {
 		this.mounted = true;
 		this.callback = () => {
 			if (!this.circle || !this.path) {
+				return;
+			}
+
+			if(this.percent < 0){
 				return;
 			}
 
@@ -56,8 +70,19 @@ export class AdvancedLinkSegment extends React.Component {
 	componentWillUnmount() {
 		this.mounted = false;
 	}
+	
 
 	render() {
+		let circle = (<circle
+			ref={ref => {
+				this.circle = ref;
+			}}
+			r={10}
+			fill="orange"
+		/>);
+		if(this.percent < 0){
+			circle = null;
+		}
 		return (
 			<>
 				<path
@@ -66,16 +91,10 @@ export class AdvancedLinkSegment extends React.Component {
 						this.path = ref;
 					}}
 					strokeWidth={this.props.model.getOptions().width}
-					stroke="rgba(255,0,0,0.5)"
+					stroke={this.props.model.getOptions().color}
 					d={this.props.path}
 				/>
-				<circle
-					ref={ref => {
-						this.circle = ref;
-					}}
-					r={10}
-					fill="orange"
-				/>
+				{circle}
 			</>
 		);
 	}
