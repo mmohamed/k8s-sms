@@ -1,0 +1,29 @@
+{
+    "ingress": true,
+    "nodes": [
+        {"id": "product-view", "name": "Product View", "front": true, "services": [
+            {"name": "Master*", "id" : "master"}
+        ]},
+        {"id": "details-bloc", "name": "Details Bloc", "active": false, "services": [
+            {"name": "v1", "id" : "v1"}
+        ]},
+        {"id": "review-bloc", "name": "Review Bloc", "services": [
+            {"name": "v1", "id" : "v1"}, 
+            {"name": "v2", "id" : "v2"}, 
+            {"name": "v3", "id" : "v3"}
+        ]},
+        {"id": "rating-bloc", "name": "Rating Bloc", "services": [
+            {"name": "v1", "id" : "v1"}, 
+            {"name": "v2", "id" : "v2"}, 
+            {"name": "v2-mysql", "id" : "v2-mysql"}
+        ]}
+    ],
+    "links": [
+        {"from": "ingress", "to": "product-view"},
+        {"from": "product-view", "to": "details-bloc"},
+        {"from": "product-view", "to": "review-bloc"},
+        {"from": "review-bloc#v2", "to": "rating-bloc"},
+        {"from": "review-bloc#v3", "to": "rating-bloc"}
+
+    ]
+}
