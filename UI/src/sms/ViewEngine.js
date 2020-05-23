@@ -37,7 +37,8 @@ export class ViewEngine {
         // nodes
         if(json.nodes){
             json.nodes.forEach(node => {
-                this.nodes.push(this.__createNode(node));
+                let isFront = this.__isFrontNode(node, json.links, json.ingress);
+                this.nodes.push(this.__createNode(node, isFront));
             });
         }
         // links
@@ -60,19 +61,32 @@ export class ViewEngine {
         return this.engine;
     }
 
+    __isFrontNode(node, links, ingress){
+        if(ingress !== true){
+            return false;
+        }
+        let isFront = false;
+        links.forEach(link => {
+            if(link.from === "ingress" && link.to === node.id){
+                isFront = true;
+            }
+        });
+        return isFront;
+    }
+
     __createIngress(){
         this.ingress = new IngressNodeModel();
         this.model.addAll(this.ingress);
     }
 
-    __createNode(data){
+    __createNode(data, isFrontNode){
         // node element
         let node = new AppNodeModel({
             name: data.name,
-            color: true === data.front ? 'rgb(192,255,0)' : (false === data.active ? 'rgb(192,255,255)' : 'rgb(0,192,255)')
+            color: true === data.disabled ? 'rgb(192,255,255)' : (isFrontNode ? 'rgb(192,255,0)' : 'rgb(0,192,255)')
         });
         // port
-        let input = node.addPort(false === data.active ? new DisabledAdvancedPortModel(true, 'IN') : new AdvancedPortModel(true, 'IN'));
+        let input = node.addPort(true === data.disabled ? new DisabledAdvancedPortModel(true, 'IN') : new AdvancedPortModel(true, 'IN'));
         let output = [];
         let out = []
         data.services.forEach(service => {

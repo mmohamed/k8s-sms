@@ -1,10 +1,10 @@
 {
     "ingress": true,
     "nodes": [
-        {"id": "product-view", "name": "Product View", "front": true, "services": [
+        {"id": "product-view", "name": "Product View", "services": [
             {"name": "Master*", "id" : "master"}
         ]},
-        {"id": "details-bloc", "name": "Details Bloc", "active": false, "services": [
+        {"id": "details-bloc", "name": "Details Bloc", "disabled": true, "services": [
             {"name": "v1", "id" : "v1"}
         ]},
         {"id": "review-bloc", "name": "Review Bloc", "services": [
