@@ -1,7 +1,7 @@
 import * as React from 'react';
 import styled from '@emotion/styled';
-import { ArcherContainer } from 'react-archer';
 import { AppPortLabel } from '../port/AppPortLabel';
+import { AppArcherContainer } from './AppArcherContainer';
 
 export const Node = styled.div`
     background-color: ${p => p.background};
@@ -53,9 +53,10 @@ export const PortsContainerSeparator = styled.div`
     width: 100px;
 `;
 
-
 export class AppNodeWidget extends React.Component {
-	render() {
+
+    render() {
+
         const relations = [];
 
         this.props.node.getOutPorts().map(port => {
@@ -72,7 +73,7 @@ export class AppNodeWidget extends React.Component {
 				<Title>
 					<TitleName>{this.props.node.getOptions().name}</TitleName>
 				</Title>
-                <ArcherContainer strokeColor='red'>
+                <AppArcherContainer strokeColor='red' engine={this.props.engine}>
                     <Ports>
                         <PortsContainer>{ this.props.node.getInPorts().map(port => (
                             <AppPortLabel engine={this.props.engine} port={port} key={port.getID()} relations={relations} />
@@ -82,7 +83,7 @@ export class AppNodeWidget extends React.Component {
                             <AppPortLabel engine={this.props.engine} port={port} key={port.getID()} relations={[]} />
                         ))}</PortsContainer>
                     </Ports>
-                </ArcherContainer>
+                </AppArcherContainer>
 			</Node>
 		);
 	}
