@@ -1,18 +1,21 @@
 import React from 'react';
-import { CanvasWidget} from '@projectstorm/react-canvas-core';
-import BaseWidget from './BaseWidget'
-import { ViewEngine } from './sms/ViewEngine';
-import data from './data.json';
+import { Router } from 'react-router-dom';
+import { createBrowserHistory } from 'history';
+import { ThemeProvider } from '@material-ui/styles';
+
+import theme from './theme/theme';
+import 'react-perfect-scrollbar/dist/css/styles.css';
+import Routes from './Routes';
 
 function App() {
-
-  let viewEngine = new ViewEngine();
-  viewEngine.load(data);
-
+  const browserHistory = createBrowserHistory();
+  
   return (
-    <BaseWidget>
-      <CanvasWidget engine={viewEngine.get()} />
-    </BaseWidget>
+    <ThemeProvider theme={theme}>
+      <Router history={browserHistory}>
+        <Routes />
+      </Router>
+    </ThemeProvider>
   );
 }
 
