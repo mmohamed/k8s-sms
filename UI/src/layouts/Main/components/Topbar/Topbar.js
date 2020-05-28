@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink, Route } from 'react-router-dom';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { makeStyles } from '@material-ui/styles';
@@ -7,6 +7,7 @@ import { AppBar, Toolbar, Badge, Hidden, IconButton } from '@material-ui/core';
 import MenuIcon from '@material-ui/icons/Menu';
 import NotificationsIcon from '@material-ui/icons/NotificationsOutlined';
 import InputIcon from '@material-ui/icons/Input';
+import AuthService from '../../../../services/AuthService';
 
 const useStyles = makeStyles(theme => ({
   root: {
@@ -27,6 +28,11 @@ const Topbar = props => {
 
   const [notifications] = useState([]);
 
+  const handleLogout = (history) => {
+    AuthService.logOut();
+	  history.push('/signin');
+  };
+  
   return (
     <AppBar
       {...rest}
@@ -52,12 +58,13 @@ const Topbar = props => {
               <NotificationsIcon />
             </Badge>
           </IconButton>
-          <IconButton
+          <Route render={({ history}) => (<IconButton
+            onClick={() => {handleLogout(history)}}
             className={classes.signOutButton}
             color="inherit"
           >
             <InputIcon />
-          </IconButton>
+          </IconButton>)} />
         </Hidden>
         <Hidden lgUp>
           <IconButton

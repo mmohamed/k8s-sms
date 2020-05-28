@@ -12,6 +12,8 @@
     "@testing-library/jest-dom": "^4.2.4",
     "@testing-library/react": "^9.5.0",
     "@testing-library/user-event": "^7.2.1",
+    "@types/react-router-dom": "^5.1.5",
+    "axios": "^0.19.2",
     "closest": "0.0.1",
     "dagre": "^0.8.5",
     "history": "^4.10.1",

@@ -5,6 +5,10 @@ import { makeStyles, useTheme } from '@material-ui/styles';
 import { useMediaQuery } from '@material-ui/core';
 import Sidebar from './components/Sidebar/Sidebar';
 import Topbar from './components/Topbar/Topbar';
+import Actionbar from './components/Actionbar/Actionbar';
+import AuthService from '../../services/AuthService';
+import { Redirect } from 'react-router-dom';
+import Notification from '../../components/Common/Notification';
 
 const useStyles = makeStyles(theme => ({
   root: {
@@ -15,7 +19,8 @@ const useStyles = makeStyles(theme => ({
     }
   },
   shiftContent: {
-    paddingLeft: 150
+    paddingLeft: 150,
+    paddingRight: 250
   },
   content: {
     height: '100%'
@@ -40,6 +45,15 @@ const Main = props => {
   const handleSidebarClose = () => {
     setOpenSidebar(false);
   };
+   
+  const [success, setSuccess] = React.useState(null);
+  const [error, setError] = React.useState(null);
+
+  const userInfo = AuthService.getUserInfo();
+
+  if(!userInfo){
+    return <Redirect to='/signin' />
+  }
 
   const shouldOpenSidebar = isDesktop ? true : openSidebar;
 
@@ -59,6 +73,13 @@ const Main = props => {
       <main className={classes.content}>
         {children}
       </main>
+      <Actionbar
+        onClose={handleSidebarClose}
+        open={shouldOpenSidebar}
+        variant={isDesktop ? 'persistent' : 'temporary'}
+      />
+      <Notification message={success} setMessage={setSuccess} type="success" />
+      <Notification message={error} setMessage={setError} type="error" />
     </div>
   );
 };
