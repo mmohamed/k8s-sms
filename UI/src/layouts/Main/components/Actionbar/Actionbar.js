@@ -4,7 +4,8 @@ import PropTypes from 'prop-types';
 import { makeStyles } from '@material-ui/styles';
 import { Drawer } from '@material-ui/core';
 import Meta from '../../../../components/Dashboard/Meta';
-import HTTPPane from '../../../../components/Dashboard/HTTPPane';
+import HTTPTrafic from '../../../../components/Dashboard/HTTPTrafic';
+import HTTPStatus from '../../../../components/Dashboard/HTTPStatus';
 
 
 const useStyles = makeStyles(theme => ({
@@ -42,7 +43,8 @@ const Actionbar = props => {
     >
       <div {...rest} className={clsx(classes.root, className)}> 
         <Meta/>
-        <HTTPPane/>
+        <HTTPTrafic/>
+        <HTTPStatus/>
       </div>
     </Drawer>
   );

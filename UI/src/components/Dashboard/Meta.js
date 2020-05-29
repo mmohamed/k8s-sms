@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import ArrowRightIcon from '@material-ui/icons/ArrowRight';
 import { makeStyles } from '@material-ui/styles';
+import Alert from '@material-ui/lab/Alert';
 import {
   Card,
   CardHeader,
@@ -10,6 +11,7 @@ import {
   ListItemText,
   ListItemIcon,
 } from '@material-ui/core';
+import { EVENT_NODE_SELECTION } from '../../sms/ViewEngine';
 
 const useStyles = makeStyles((theme) => ({
   cardHeader: {
@@ -44,29 +46,45 @@ const Meta = props => {
 
   const classes = useStyles();
   
-  const rows = [
-      {name: 'Group name', value : 'app'},
-      {name: 'Service name', value : 'app-service'},
-      {name: 'Service namespace', value : 'app'},
-      {name: 'Deployment name', value : 'app-deployment'},
-      {name: 'Deployment namespace', value : 'app'},
-      {name: 'HTTP Port', value : '80'},
-  ];
+  const [data, setData] = useState([]);
+
+  document.addEventListener(EVENT_NODE_SELECTION, function(event) { 
+    if(event.detail.isSelected){
+        setData([
+            {name: 'Group name', value : 'app'},
+            {name: 'Service name', value : 'app-service'},
+            {name: 'Service namespace', value : 'app'},
+            {name: 'Deployment name', value : 'app-deployment'},
+            {name: 'Deployment namespace', value : 'app'},
+            {name: 'HTTP Port', value : '80'},
+        ]);
+    }else{
+        setData([]);
+    }
+  });
+  
+  let view = (
+    <List className={classes.listRoot}>
+        {data.map((row) => (
+        <ListItem className={classes.listItem} key={row.name}>
+            <ListItemIcon className={classes.listItemIcon}>
+                <ArrowRightIcon />
+            </ListItemIcon>
+            <ListItemText className={classes.listItemText} primary={row.name} secondary={row.value}/>
+        </ListItem>
+        ))}
+    </List>
+  )
+
+  if(!data.length){
+    view = (<Alert severity="info">No data available !</Alert>);
+  }
 
   return (
     <Card>
         <CardHeader className={classes.cardHeader} title="Metadata" titleTypographyProps={{color: 'primary', variant: 'h5'}}/>
         <CardContent className={classes.cardContent}>
-            <List className={classes.listRoot}>
-                {rows.map((row) => (
-                <ListItem className={classes.listItem} key={row.name}>
-                    <ListItemIcon className={classes.listItemIcon}>
-                        <ArrowRightIcon />
-                    </ListItemIcon>
-                    <ListItemText className={classes.listItemText} primary={row.name} secondary={row.value}/>
-                </ListItem>
-                ))}
-            </List>
+            {view}   
         </CardContent>
     </Card>
   );

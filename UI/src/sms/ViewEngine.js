@@ -7,6 +7,8 @@ import { IngressNodeFactory } from '../node/IngressNodeFactory';
 import { AppNodeModel } from '../node/AppNodeModel';
 import { IngressNodeModel } from '../node/IngressNodeModel';
 
+export const EVENT_NODE_SELECTION = 'app.event.node.selection';
+
 export class ViewEngine {
     
     engine;
@@ -98,6 +100,21 @@ export class ViewEngine {
         this.model.addAll(node);
         this.model.addAll(input);
         this.model.addAll(output);
+        // listener
+        let that = this;
+        node.registerListener({
+            eventDidFire: function(event){
+                if(event.function === 'selectionChanged'){
+                    let target = that.__getNodeByModel(event.entity);
+                    if(null !== target){
+                        let appEvent = new CustomEvent(EVENT_NODE_SELECTION, {
+                            detail: { isSelected: event.isSelected, data: target }
+                        });
+                        document.dispatchEvent(appEvent);
+                    }
+                }
+            }
+        });
         // return
         return {node: node, id: data.id, in: input, out: out};
     }
@@ -144,10 +161,20 @@ export class ViewEngine {
         let target = null;
         this.nodes.forEach(node => {
             if(node.id === id)
-                target= node;
+                target = node;
         });
         return target;
     }
+
+    __getNodeByModel(nodeModel){
+        let target = null;
+        this.nodes.forEach(node => {
+            if(node.node === nodeModel)
+                target = node;
+        });
+        return target;
+    }
+    
 
     __distrube(){
         let model = this.model;
