@@ -4,6 +4,8 @@ import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { makeStyles } from '@material-ui/styles';
 import { Avatar, Typography } from '@material-ui/core';
+import AuthService from '../../../../../services/AuthService';
+import { deepPurple } from '@material-ui/core/colors';
 
 const useStyles = makeStyles(theme => ({
   root: {
@@ -18,6 +20,10 @@ const useStyles = makeStyles(theme => ({
   },
   name: {
     marginTop: theme.spacing(1)
+  },
+  purple: {
+    color: theme.palette.getContrastText(deepPurple[500]),
+    backgroundColor: deepPurple[500],
   }
 }));
 
@@ -26,10 +32,18 @@ const Profile = props => {
 
   const classes = useStyles();
 
+  let userInfo = AuthService.getUserInfo();
+
+  if(!userInfo){
+    userInfo = {
+      username: '',
+    }
+  }
+  
   const user = {
-    name: 'Shen Zhi',
-    avatar: '/images/avatars/avatar_11.png',
-    bio: 'Brain Director'
+    name: userInfo.username.substring(0, userInfo.username.indexOf('@')),
+    company: userInfo.username.substring(userInfo.username.indexOf('@')+1),
+    avatar: userInfo.username.substring(0, 2).toUpperCase()
   };
 
   return (
@@ -39,18 +53,19 @@ const Profile = props => {
     >
       <Avatar
         alt="Person"
-        className={classes.avatar}
+        className={(classes.avatar, classes.purple)}
         component={RouterLink}
-        src={user.avatar}
         to="/settings"
-      />
+      >
+        {user.avatar}
+      </Avatar>
       <Typography
         className={classes.name}
         variant="h4"
       >
         {user.name}
       </Typography>
-      <Typography variant="body2">{user.bio}</Typography>
+      <Typography variant="body2">{user.company}</Typography>
     </div>
   );
 };

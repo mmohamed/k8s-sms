@@ -19,8 +19,7 @@ const useStyles = makeStyles(theme => ({
     }
   },
   shiftContent: {
-    paddingLeft: 150,
-    paddingRight: 250
+    paddingRight: 350
   },
   content: {
     height: '100%'
@@ -37,13 +36,18 @@ const Main = props => {
   });
 
   const [openSidebar, setOpenSidebar] = useState(false);
-
-  const handleSidebarOpen = () => {
-    setOpenSidebar(true);
-  };
+  const [openActionbar, setOpenActionbar] = useState(false);
 
   const handleSidebarClose = () => {
     setOpenSidebar(false);
+  };
+  const handleActionbarClose = () => {
+    setOpenActionbar(false);
+  };
+   
+  const handleBarOpen = () => {
+    setOpenSidebar(true);
+    setOpenActionbar(true);
   };
    
   const [success, setSuccess] = React.useState(null);
@@ -55,7 +59,7 @@ const Main = props => {
     return <Redirect to='/signin' />
   }
 
-  const shouldOpenSidebar = isDesktop ? true : openSidebar;
+  const shouldOpenAction = isDesktop ? true : openActionbar;
 
   return (
     <div
@@ -64,20 +68,12 @@ const Main = props => {
         [classes.shiftContent]: isDesktop
       })}
     >
-      <Topbar onSidebarOpen={handleSidebarOpen} />
-      <Sidebar
-        onClose={handleSidebarClose}
-        open={shouldOpenSidebar}
-        variant={isDesktop ? 'persistent' : 'temporary'}
-      />
+      <Topbar onSidebarOpen={handleBarOpen} />
+      <Sidebar onClose={handleSidebarClose} open={openSidebar} variant={'temporary'}/>
       <main className={classes.content}>
         {children}
       </main>
-      <Actionbar
-        onClose={handleSidebarClose}
-        open={shouldOpenSidebar}
-        variant={isDesktop ? 'persistent' : 'temporary'}
-      />
+      <Actionbar onClose={handleActionbarClose} open={shouldOpenAction} variant={isDesktop ? 'persistent' : 'temporary'}/>
       <Notification message={success} setMessage={setSuccess} type="success" />
       <Notification message={error} setMessage={setError} type="error" />
     </div>
@@ -85,7 +81,8 @@ const Main = props => {
 };
 
 Main.propTypes = {
-  children: PropTypes.node
+  children: PropTypes.node,
+  history: PropTypes.object
 };
 
 export default Main;

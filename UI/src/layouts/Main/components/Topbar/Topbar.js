@@ -58,6 +58,7 @@ const Topbar = props => {
               <NotificationsIcon />
             </Badge>
           </IconButton>
+        
           <Route render={({ history}) => (<IconButton
             onClick={() => {handleLogout(history)}}
             className={classes.signOutButton}
@@ -65,15 +66,11 @@ const Topbar = props => {
           >
             <InputIcon />
           </IconButton>)} />
+
         </Hidden>
-        <Hidden lgUp>
-          <IconButton
-            color="inherit"
-            onClick={onSidebarOpen}
-          >
-            <MenuIcon />
-          </IconButton>
-        </Hidden>
+        <IconButton color="inherit" onClick={onSidebarOpen}>
+          <MenuIcon />
+        </IconButton>
       </Toolbar>
     </AppBar>
   );

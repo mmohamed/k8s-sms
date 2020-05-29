@@ -2,12 +2,14 @@ import React from 'react';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { makeStyles } from '@material-ui/styles';
-import { Divider, Drawer } from '@material-ui/core';
+import { Drawer } from '@material-ui/core';
+import Meta from '../../../../components/Dashboard/Meta';
+import HTTPPane from '../../../../components/Dashboard/HTTPPane';
 
 
 const useStyles = makeStyles(theme => ({
   drawer: {
-    width: 250,
+    width: 350,
     [theme.breakpoints.up('lg')]: {
       marginTop: 64,
       height: 'calc(100% - 64px)'
@@ -18,7 +20,7 @@ const useStyles = makeStyles(theme => ({
     display: 'flex',
     flexDirection: 'column',
     height: '100%',
-    padding: theme.spacing(2)
+    padding: theme.spacing(0)
   },
   divider: {
     margin: theme.spacing(2, 0)
@@ -38,11 +40,9 @@ const Actionbar = props => {
       open={open}
       variant={variant}
     >
-      <div
-        {...rest}
-        className={clsx(classes.root, className)}
-      >
-        <Divider className={classes.divider} />
+      <div {...rest} className={clsx(classes.root, className)}> 
+        <Meta/>
+        <HTTPPane/>
       </div>
     </Drawer>
   );
