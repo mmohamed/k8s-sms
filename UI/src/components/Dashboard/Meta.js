@@ -3,23 +3,15 @@ import ArrowRightIcon from '@material-ui/icons/ArrowRight';
 import { makeStyles } from '@material-ui/styles';
 import Alert from '@material-ui/lab/Alert';
 import {
-  Card,
-  CardHeader,
-  CardContent,
   List,
   ListItem,
   ListItemText,
   ListItemIcon,
 } from '@material-ui/core';
 import { EVENT_NODE_SELECTION } from '../../sms/ViewEngine';
+import CardPane from '../Common/CardPane';
 
 const useStyles = makeStyles((theme) => ({
-  cardHeader: {
-    paddingBottom: theme.spacing(0.5)
-  },
-  cardContent: {
-    paddingTop: 0
-  },
   listRoot: {
       padding: 0
   },
@@ -81,12 +73,7 @@ const Meta = props => {
   }
 
   return (
-    <Card>
-        <CardHeader className={classes.cardHeader} title="Metadata" titleTypographyProps={{color: 'primary', variant: 'h5'}}/>
-        <CardContent className={classes.cardContent}>
-            {view}   
-        </CardContent>
-    </Card>
+    <CardPane title="Metadata">{view}</CardPane>
   );
 };
 

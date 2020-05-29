@@ -1,13 +1,11 @@
 import React, { useState } from 'react';
 import { makeStyles } from '@material-ui/styles';
 import Alert from '@material-ui/lab/Alert';
-import { TableContainer, Paper, Table, TableHead, TableCell, TableRow, TableBody, Card, CardHeader, CardContent } from '@material-ui/core';
+import { TableContainer, Paper, Table, TableHead, TableCell, TableRow, TableBody } from '@material-ui/core';
 import { EVENT_NODE_SELECTION } from '../../sms/ViewEngine';
+import CardPane from '../Common/CardPane';
 
 const useStyles = makeStyles(theme => ({
-    cardContent: {
-        paddingTop: 0
-    },
     cell: {
         padding: theme.spacing(0.2)
     }
@@ -60,12 +58,7 @@ const HTTPTrafic = props => {
   }
   
   return (
-    <Card>
-        <CardHeader className={classes.cardHeader} title="HTTP Trafic" titleTypographyProps={{color: 'primary', variant: 'h5'}}/>
-        <CardContent className={classes.cardContent}>
-            {view}
-        </CardContent>
-    </Card>
+    <CardPane title="HTTP Trafic">{view}</CardPane>
   );
 };
 

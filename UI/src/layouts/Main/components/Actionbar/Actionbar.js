@@ -6,6 +6,7 @@ import { Drawer } from '@material-ui/core';
 import Meta from '../../../../components/Dashboard/Meta';
 import HTTPTrafic from '../../../../components/Dashboard/HTTPTrafic';
 import HTTPStatus from '../../../../components/Dashboard/HTTPStatus';
+import Service from '../../../../components/Dashboard/Service';
 
 
 const useStyles = makeStyles(theme => ({
@@ -20,7 +21,7 @@ const useStyles = makeStyles(theme => ({
     backgroundColor: theme.palette.white,
     display: 'flex',
     flexDirection: 'column',
-    height: '100%',
+    //height: '100%',
     padding: theme.spacing(0)
   },
   divider: {
@@ -45,6 +46,7 @@ const Actionbar = props => {
         <Meta/>
         <HTTPTrafic/>
         <HTTPStatus/>
+        <Service/>
       </div>
     </Drawer>
   );

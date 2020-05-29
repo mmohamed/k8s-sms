@@ -1,15 +1,12 @@
 import React, { useState } from 'react';
 import { HorizontalBar } from 'react-chartjs-2';
 import { makeStyles } from '@material-ui/styles';
-import { Card, CardHeader, CardContent } from '@material-ui/core';
 import palette from './../../theme/palette';
 import Alert from '@material-ui/lab/Alert';
 import { EVENT_NODE_SELECTION } from '../../sms/ViewEngine';
+import CardPane from '../Common/CardPane';
 
 const useStyles = makeStyles(theme => ({
-    cardContent: {
-        paddingTop: 0
-    },
     chartContainer: {
         maxHeight: 150,
         position: 'relative'
@@ -106,14 +103,9 @@ const HTTPStatus = props => {
     view = (<Alert severity="info">No data available !</Alert>);
   }
   return (
-    <Card>
-        <CardHeader className={classes.cardHeader} title="HTTP Status" titleTypographyProps={{color: 'primary', variant: 'h5'}}/>
-        <CardContent className={classes.cardContent}>
-            <div className={classes.chartContainer}>
-                {view}
-            </div>
-        </CardContent>
-    </Card>
+    <CardPane title="HTTP Status">
+        <div className={classes.chartContainer}>{view}</div>
+    </CardPane>
   );
 };
 
