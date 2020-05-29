@@ -6,7 +6,7 @@ import { makeStyles } from '@material-ui/core/styles';
 const useStyles = makeStyles(theme => ({
   backdrop: {
     zIndex: theme.zIndex.drawer + 1,
-    color: '#fff',
+    color: '#fff'
   },
 }));
 
@@ -15,6 +15,9 @@ export default function Loader(props) {
   return (
     <div>
       <Backdrop
+        style={{
+          backgroundColor: props.dark ? 'rgba(0, 0, 0, 0.9)' : 'rgba(0, 0, 0, 0.5)'
+        }}
         className={classes.backdrop}
         open={props.open}
         onClick={() => {

@@ -26,12 +26,14 @@ export class ViewEngine {
         this.engine.getPortFactories().registerFactory(new IngressPortFactory('ingress',
             config => new IngressPortModel(PortModelAlignment.RIGHT)));
         this.engine.getNodeFactories().registerFactory(new IngressNodeFactory());
-
+        // create model
         this.model = new DiagramModel();
+        // set model
+        this.engine.setModel(this.model);
     }
 
 
-    load(json){
+    load(json, callback){
         // ingress
         if(json.ingress){
             this.__createIngress();
@@ -53,10 +55,8 @@ export class ViewEngine {
                 
             });
         }
-        // set model
-        this.engine.setModel(this.model);
         // distrube
-        this.__distrube();
+        this.__distrube(callback);
     }
 
     get(){
@@ -176,7 +176,7 @@ export class ViewEngine {
     }
     
 
-    __distrube(){
+    __distrube(callback){
         let model = this.model;
         let engine = this.engine;
         setTimeout(function(){ // @see https://github.com/dagrejs/dagre/wiki
@@ -193,6 +193,10 @@ export class ViewEngine {
             dagre.redistribute(model);
             engine.getLinkFactories().getFactory(PathFindingLinkFactory.NAME).calculateRoutingMatrix();
             engine.repaintCanvas();
+            engine.zoomToFitNodes(50);
+            if('function' === typeof callback){
+                callback()
+            }
           }, 1000);
     }
 }
