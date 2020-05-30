@@ -77,31 +77,41 @@ NotificationContentWrapper.propTypes = {
   variant: PropTypes.oneOf(['error', 'info', 'success', 'warning']).isRequired,
 };
 
-export default function Notification(props) {
-  const handleClose = (event, reason) => {
+export default class Notification extends React.Component{
+
+  constructor(props){
+    super(props);
+    this.handleClose = this.handleClose.bind(this);
+  }
+
+  handleClose(event, reason){
     if (reason === 'clickaway') {
       return;
     }
-    props.setMessage(null);
+    if ('function' === typeof this.props.setMessage){
+      this.props.setMessage(null);
+    }
   };
 
-  return (
-	  <Snackbar
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'left',
-        }}
-        open={props.message != null}
-        autoHideDuration={props.duration}
-        onClose={handleClose}
-      >
-		<NotificationContentWrapper
-			onClose={handleClose}
-			variant={props.type}
-			message={props.message}
-			/>
-	  </Snackbar>
-  );
+  render(){
+    return (
+      <Snackbar
+          anchorOrigin={{
+            vertical: 'bottom',
+            horizontal: 'left',
+          }}
+          open={this.props.message != null}
+          autoHideDuration={this.props.duration}
+          onClose={this.handleClose}
+        >
+      <NotificationContentWrapper
+        onClose={this.handleClose}
+        variant={this.props.type}
+        message={this.props.message}
+        />
+      </Snackbar>
+    );
+  }
 }
 
 Notification.propTypes = {

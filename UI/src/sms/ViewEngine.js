@@ -116,7 +116,7 @@ export class ViewEngine {
             }
         });
         // return
-        return {node: node, id: data.id, in: input, out: out};
+        return {node: node, id: data.id, in: input, out: out, raw: data};
     }
 
     __createLink(data){

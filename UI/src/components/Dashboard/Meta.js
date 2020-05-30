@@ -42,14 +42,8 @@ const Meta = props => {
 
   document.addEventListener(EVENT_NODE_SELECTION, function(event) { 
     if(event.detail.isSelected){
-        setData([
-            {name: 'Group name', value : 'app'},
-            {name: 'Service name', value : 'app-service'},
-            {name: 'Service namespace', value : 'app'},
-            {name: 'Deployment name', value : 'app-deployment'},
-            {name: 'Deployment namespace', value : 'app'},
-            {name: 'HTTP Port', value : '80'},
-        ]);
+        let dt = event.detail.data.raw;
+        setData(dt.metadata ? dt.metadata : []);
     }else{
         setData([]);
     }

@@ -19,10 +19,23 @@ const HTTPTrafic = props => {
   
   document.addEventListener(EVENT_NODE_SELECTION, function(event) { 
     if(event.detail.isSelected){
-        setData([
-            {'direction': 'In', 'perSecond': 0.9, 'success': 100, 'error': 0},
-            {'direction': 'Out', 'perSecond': 2.19, 'success': 98, 'error': 2}
-        ]);
+        let dt = event.detail.data.raw;
+        let preparedData = [];
+        if(dt.trafic && dt.trafic.in){
+            preparedData.push({
+                'direction': 'In', 
+                'perSecond': dt.trafic.in.perSecond, 
+                'success': dt.trafic.in.success, 
+                'error': dt.trafic.in.error});
+        }
+        if(dt.trafic && dt.trafic.out){
+            preparedData.push({
+                'direction': 'Out', 
+                'perSecond': dt.trafic.out.perSecond, 
+                'success': dt.trafic.out.success, 
+                'error': dt.trafic.out.error});
+        }
+        setData(preparedData);
     }else{
         setData([]);
     }

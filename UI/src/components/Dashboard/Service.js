@@ -15,7 +15,7 @@ const useStyles = makeStyles((theme) => ({
     justifyContent: 'center',
     flexWrap: 'wrap',
     listStyle: 'none',
-    padding: theme.spacing(0.5),
+    padding: 0,
     margin: 0
   },
   chip: {
@@ -31,11 +31,8 @@ const Service = props => {
 
   document.addEventListener(EVENT_NODE_SELECTION, function(event) { 
     if(event.detail.isSelected){
-        setData([
-            {"name": "v1", "id" : "v1"}, 
-            {"name": "v2", "id" : "v2"}, 
-            {"name": "v2-mysql", "id" : "v2-mysql"},
-        ]);
+        let dt = event.detail.data.raw;
+        setData(dt.services ? dt.services : []);
     }else{
         setData([]);
     }

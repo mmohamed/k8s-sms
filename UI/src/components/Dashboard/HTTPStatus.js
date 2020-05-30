@@ -21,21 +21,34 @@ const HTTPStatus = props => {
   
   document.addEventListener(EVENT_NODE_SELECTION, function(event) { 
     if(event.detail.isSelected){
-        setData({
-            labels: ['OK', '3xx', '4xx', '5xx', 'Other'],
-            datasets: [
-              {
-                label: 'In',
-                backgroundColor: palette.primary.main,
-                data: [88, 4, 4, 3, 1]
-              },
-              {
-                label: 'Out',
-                backgroundColor: palette.primary.light,
-                data: [19, 0, 12, 69, 0]
-              }
-            ]
-        });
+        let dt = event.detail.data.raw;
+        let preparedData = {
+          labels: ['OK', '3xx', '4xx', '5xx', 'Other'],
+          datasets: []
+        };
+        if(dt.status && dt.status.in){
+          preparedData.datasets.push({
+            label: 'In',
+            backgroundColor: palette.primary.main,
+            data: [dt.status.in['2xx'], 
+              dt.status.in['3xx'], 
+              dt.status.in['4xx'], 
+              dt.status.in['5xx'], 
+              100 - (dt.status.in['2xx'] + dt.status.in['3xx'] + dt.status.in['4xx'] + dt.status.in['5xx'])]
+          });
+        }
+        if(dt.status && dt.status.out){
+          preparedData.datasets.push({
+            label: 'Out',
+            backgroundColor: palette.primary.light,
+            data: [dt.status.out['2xx'], 
+              dt.status.out['3xx'], 
+              dt.status.out['4xx'], 
+              dt.status.out['5xx'], 
+              100 - (dt.status.out['2xx'] + dt.status.out['3xx'] + dt.status.out['4xx'] + dt.status.out['5xx'])]
+          });
+        }
+        setData(preparedData.datasets.length > 0 ? preparedData : {});
     }else{
         setData({});
     }
