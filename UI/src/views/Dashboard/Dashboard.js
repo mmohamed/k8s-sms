@@ -2,7 +2,6 @@ import React from 'react';
 import { CanvasWidget} from '@projectstorm/react-canvas-core';
 import BaseWidget from './../../BaseWidget'
 import { ViewEngine } from './../../sms/ViewEngine';
-import data from './../../data.json';
 import Loader from '../../components/Common/Loader';
 import SMSService from '../../services/SMSService';
 import Notification from '../../components/Common/Notification';
@@ -31,6 +30,7 @@ class Dashboard extends React.Component{
       }
     }).catch(error => {
       this.setState({loading: false, error : 'Unable to contact server !'});
+      // import data from './../../data.json';
       /*this.viewEngine.load(data, () => {
         this.setState({loading: false});
       });*/
