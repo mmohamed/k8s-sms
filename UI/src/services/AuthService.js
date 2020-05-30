@@ -1,11 +1,11 @@
 import axios from 'axios';
 
-const USER_API_BASE_URL = process.env.REACT_APP_URL_BASE + '/token/';
+const USER_API_BASE_URL = process.env.REACT_APP_URL_BASE + 'auth';
 
 class AuthService {
 
     login(credentials){
-        return axios.post(USER_API_BASE_URL + "generate", credentials);
+        return axios.post(USER_API_BASE_URL , credentials);
     }
 
     getUserInfo(){
@@ -17,10 +17,7 @@ class AuthService {
     }
 
     logOut() {
-        let header = this.getAuthHeader();
-        let token = this.getUserInfo();
         localStorage.removeItem('userInfo');
-        return axios.post(USER_API_BASE_URL + 'revoke', token, header);
     }
 }
 

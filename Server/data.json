@@ -1,0 +1,102 @@
+{
+    "ingress": true,
+    "nodes": [
+        {
+            "id": "product-view", 
+            "name": "Product View",
+            "services": [
+                {"name": "Master*", "id" : "master"}
+            ],
+            "metadata": [
+                {"name": "Group name", "value": "product"},
+                {"name": "Service name", "value": "product-service"},
+                {"name": "Service namespace", "value": "app"},
+                {"name": "Deployment name", "value": "product-deployment"},
+                {"name": "Deployment namespace", "value": "app"},
+                {"name": "HTTP port", "value": "80"}
+            ], 
+            "trafic" : {
+                "in" : {"perSecond": 2.93, "success": 100, "error": 0},
+                "out" : {"perSecond": 2.93, "success": 98, "error": 2}
+            }, 
+            "status": {
+                "in" : {"2xx": 45, "3xx": 14, "4xx": 14, "5xx" : 3},
+                "out" : {"2xx": 1, "3xx": 20, "4xx": 52, "5xx" : 9}
+            }
+        },
+        {
+            "id": "details-bloc", 
+            "name": "Details Bloc", 
+            "disabled": true, 
+            "services": [
+                {"name": "v1", "id" : "v1"}
+            ],
+            "metadata": [
+                {"name": "Group name", "value": "details"},
+                {"name": "Service name", "value": "details-service"},
+                {"name": "Service namespace", "value": "app"},
+                {"name": "Deployment name", "value": "details-deployment"},
+                {"name": "Deployment namespace", "value": "app"},
+                {"name": "HTTP port", "value": "80"}
+            ]
+        },
+        {
+            "id": "review-bloc", 
+            "name": "Review Bloc", 
+            "services": [
+                {"name": "v1", "id" : "v1"}, 
+                {"name": "v2", "id" : "v2"}, 
+                {"name": "v3", "id" : "v3"}
+            ], 
+            "metadata": [
+                {"name": "Group name", "value": "app"},
+                {"name": "Service name", "value": "app-service"},
+                {"name": "Service namespace", "value": "app"},
+                {"name": "Deployment name", "value": "app-deployment"},
+                {"name": "Deployment namespace", "value": "app"},
+                {"name": "HTTP port", "value": "80"}
+            ], 
+            "trafic" : {
+                "in" : {"perSecond": 0.9, "success": 100, "error": 0},
+                "out" : {"perSecond": 2.19, "success": 98, "error": 2}
+            }, 
+            "status": {
+                "in" : {"2xx": 88, "3xx": 4, "4xx": 4, "5xx" : 3},
+                "out" : {"2xx": 19, "3xx": 0, "4xx": 12, "5xx" : 69}
+            }
+        },
+        {
+            "id": "rating-bloc", 
+            "name": "Rating Bloc", 
+            "services": [
+                {"name": "v1", "id" : "v1"}, 
+                {"name": "v2", "id" : "v2"}, 
+                {"name": "v2-mysql", "id" : "v2-mysql"}
+            ],
+            "metadata": [
+                {"name": "Group name", "value": "rating"},
+                {"name": "Service name", "value": "rating-service"},
+                {"name": "Service namespace", "value": "app"},
+                {"name": "Deployment name", "value": "rating-deployment"},
+                {"name": "Deployment namespace", "value": "app"},
+                {"name": "HTTP port", "value": "80"}
+            ], 
+            "trafic" : {
+                "in" : {"perSecond": 0.3, "success": 100, "error": 0},
+                "out" : {"perSecond": 0, "success": 0, "error": 0}
+            }, 
+            "status": {
+                "in" : {"2xx": 45, "3xx": 14, "4xx": 14, "5xx" : 3},
+                "out" : {"2xx": 1, "3xx": 20, "4xx": 52, "5xx" : 9}
+            }
+        }
+    ],
+    "links": [
+        {"from": "ingress", "to": "product-view"},
+        {"from": "product-view", "to": "details-bloc"},
+        {"from": "product-view", "to": "review-bloc"},
+        {"from": "review-bloc#v2", "to": "rating-bloc"},
+        {"from": "review-bloc#v3", "to": "rating-bloc"}
+
+    ]
+}

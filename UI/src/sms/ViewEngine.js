@@ -193,10 +193,16 @@ export class ViewEngine {
             dagre.redistribute(model);
             engine.getLinkFactories().getFactory(PathFindingLinkFactory.NAME).calculateRoutingMatrix();
             engine.repaintCanvas();
-            engine.zoomToFitNodes(50);
-            if('function' === typeof callback){
-                callback()
-            }
-          }, 1000);
+            // for http delai, need redistribute.
+            setTimeout(function(){
+                dagre.redistribute(model);
+                engine.getLinkFactories().getFactory(PathFindingLinkFactory.NAME).calculateRoutingMatrix();
+                engine.repaintCanvas();
+                engine.zoomToFitNodes(100);
+                if('function' === typeof callback){
+                    callback()
+                }
+              }, 100);
+          }, 100);
     }
 }

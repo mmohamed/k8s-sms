@@ -30,10 +30,10 @@ class Dashboard extends React.Component{
         this.setState({loading: false, error : res.data.message});
       }
     }).catch(error => {
-      //this.setState({loading: false, error : 'Unable to contact server !'});
-      this.viewEngine.load(data, () => {
+      this.setState({loading: false, error : 'Unable to contact server !'});
+      /*this.viewEngine.load(data, () => {
         this.setState({loading: false});
-      });
+      });*/
     });
   }
 
@@ -46,7 +46,6 @@ class Dashboard extends React.Component{
   }
 
   handleErrorMessage(message){
-    console.debug(this);
     this.setState({error: message});
   }
 

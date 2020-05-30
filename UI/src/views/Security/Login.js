@@ -155,18 +155,21 @@ const SignIn = props => {
     const credentials = {username: formState.values.email, password: formState.values.password};
     AuthService.login(credentials).then(res => {
         if(res.status === 200){
-            localStorage.setItem('userInfo', JSON.stringify(res.data));
+            credentials.token = res.data.access_token;
+            localStorage.setItem('userInfo', JSON.stringify(credentials));
+            setLoading(false);
             history.push('/');
         }else {
            setError(res.data.message);
            setLoading(false);
         }
     }).catch(error => {
-      //setError('Unable to communicate with server !');
+      if(error.response && 401 === error.response.status){
+        setError('Invalid credentials !');
+      }else{
+        setError('Unable to communicate with server !');
+      }
       setLoading(false);
-      credentials.token = 'faketoken';
-      localStorage.setItem('userInfo', JSON.stringify(credentials));
-      history.push('/');
     });
   };
 
