@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Link as RouterLink, withRouter } from 'react-router-dom';
+import { withRouter } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import { makeStyles } from '@material-ui/styles';
-import { Grid, Button, TextField, Link, Typography } from '@material-ui/core';
+import { Grid, Button, TextField, Typography } from '@material-ui/core';
 import AuthService from '../../services/AuthService';
 import Notification from '../../components/Common/Notification';
 import Loader from '../../components/Common/Loader';
@@ -153,24 +153,13 @@ const SignIn = props => {
     event.preventDefault();
     setLoading(true);
     const credentials = {username: formState.values.email, password: formState.values.password};
-    AuthService.login(credentials).then(res => {
-        if(res.status === 200){
-            credentials.token = res.data.access_token;
-            localStorage.setItem('userInfo', JSON.stringify(credentials));
-            setLoading(false);
-            history.push('/');
-        }else {
-           setError(res.data.message);
-           setLoading(false);
-        }
-    }).catch(error => {
-      if(error.response && 401 === error.response.status){
-        setError('Invalid credentials !');
-      }else{
-        setError('Unable to communicate with server !');
-      }
+    AuthService.auth(credentials, (user) =>{
       setLoading(false);
-    });
+      history.push('/');
+    }, (message) => {
+      setError(message);
+      setLoading(false);
+    })
   };
 
   const hasError = field =>
@@ -285,14 +274,13 @@ const SignIn = props => {
                   color="textSecondary"
                   variant="body1"
                 >
-                  Don't have an account?{' '}
-                  <Link
-                    component={RouterLink}
-                    to="/sign-up"
-                    variant="h6"
+                  Want it ?{' '}
+                  <a target="_blank" 
+                    rel="noopener noreferrer"
+                    href="https://github.com/mmohamed/k8s-sms"
                   >
-                    Sign up
-                  </Link>
+                    Follow me
+                  </a>
                 </Typography>
               </form>
             </div>

@@ -285,18 +285,6 @@ spec:
   selector:
     run: api
 
----   
-apiVersion: v1
-kind: Secret
-metadata:
-  name: sms-tls
-  namespace: kube-sms
-type: Opaque  
-data:
-  tls.crt: {{tls-crt}}
-  tls.key: {{tls-key}}
-type: kubernetes.io/tls
-
 ---
 apiVersion: extensions/v1beta1
 kind: Ingress

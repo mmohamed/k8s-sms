@@ -1,6 +1,6 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "SMS for K8S",
+  "name": "Simple Mesh Service for K8S",
   "icons": [
     {
       "src": "favicon.ico",

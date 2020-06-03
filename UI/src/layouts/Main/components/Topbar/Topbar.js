@@ -29,7 +29,7 @@ const Topbar = props => {
   const [notifications] = useState([]);
 
   const handleLogout = (history) => {
-    AuthService.logOut();
+    AuthService.logout();
 	  history.push('/signin');
   };
   

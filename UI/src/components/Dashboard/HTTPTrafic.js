@@ -47,7 +47,7 @@ const HTTPTrafic = props => {
             <TableHead>
                 <TableRow>
                     <TableCell></TableCell>
-                    <TableCell className={classes.cell} align="right">(AVG S) Time</TableCell>
+                    <TableCell className={classes.cell} align="right">(Avg) Time</TableCell>
                     <TableCell className={classes.cell} align="right">% Success</TableCell>
                     <TableCell className={classes.cell} align="right">% Error</TableCell>
                 </TableRow>

@@ -16,7 +16,7 @@ const useStyles = makeStyles((theme) => ({
       padding: 0
   },
   listItem: {
-    padding: theme.spacing(0, 1, 0, 1)
+    padding: theme.spacing(0, 1, 0, 0)
   },
   listItemIcon: {
     minWidth: 0
@@ -28,7 +28,8 @@ const useStyles = makeStyles((theme) => ({
         display: 'inline-block'
     },
     '& .MuiTypography-colorTextSecondary':{
-        float: 'right'
+        float: 'right',
+        paddingTop: theme.spacing(0.25)
     }
       
   }
@@ -43,7 +44,12 @@ const Meta = props => {
   document.addEventListener(EVENT_NODE_SELECTION, function(event) { 
     if(event.detail.isSelected){
         let dt = event.detail.data.raw;
-        setData(dt.metadata ? dt.metadata : []);
+        let metadata = JSON.parse(JSON.stringify(dt.metadata ? dt.metadata : []));
+        if(metadata.length){
+          metadata.push({name: 'Services', value: dt.services ? dt.services.length : 0});
+          metadata.push({name: 'Status', value: dt.disabled ? 'disabled' : 'enabled'});
+        }
+        setData(metadata);
     }else{
         setData([]);
     }

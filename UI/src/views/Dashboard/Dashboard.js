@@ -5,7 +5,6 @@ import { ViewEngine } from './../../sms/ViewEngine';
 import Loader from '../../components/Common/Loader';
 import SMSService from '../../services/SMSService';
 import Notification from '../../components/Common/Notification';
-import AuthService from '../../services/AuthService';
 
 class Dashboard extends React.Component{
   
@@ -21,20 +20,16 @@ class Dashboard extends React.Component{
   }
  
   componentDidMount(){
-    SMSService.get().then(res => {
-      if(res.status === 200){
-        this.viewEngine.load(res.data, () => {
-          this.setState({loading: false});
-        });
-      }else {
-        this.setState({loading: false, error : res.data.message});
-      }
-    }).catch(error => {
-      if(401 === error.response.status){
-        AuthService.logOut();
-        return this.props.history.push('/');
-      }
-      this.setState({loading: false, error : 'Unable to contact server !'});
+    let that = this;
+    SMSService.get(function(data){
+      that.viewEngine.load(data, () => {
+        that.setState({loading: false});
+      });
+    }, function(message){
+      that.setState({loading: false, error : message});
+    }, function(){
+      that.setState({loading: false });
+      that.props.history.push('/');
     });
   }
 
