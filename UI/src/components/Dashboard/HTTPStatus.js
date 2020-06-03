@@ -27,6 +27,7 @@ const HTTPStatus = props => {
           datasets: []
         };
         if(dt.status && dt.status.in){
+          let sum = dt.status.in['2xx'] + dt.status.in['3xx'] + dt.status.in['4xx'] + dt.status.in['5xx'];
           preparedData.datasets.push({
             label: 'In',
             backgroundColor: palette.primary.main,
@@ -34,10 +35,11 @@ const HTTPStatus = props => {
               dt.status.in['3xx'], 
               dt.status.in['4xx'], 
               dt.status.in['5xx'], 
-              100 - (dt.status.in['2xx'] + dt.status.in['3xx'] + dt.status.in['4xx'] + dt.status.in['5xx'])]
+              0 === sum ? 0 : 100 - sum]
           });
         }
         if(dt.status && dt.status.out){
+          let sum = dt.status.out['2xx'] + dt.status.out['3xx'] + dt.status.out['4xx'] + dt.status.out['5xx'];
           preparedData.datasets.push({
             label: 'Out',
             backgroundColor: palette.primary.light,
@@ -45,7 +47,7 @@ const HTTPStatus = props => {
               dt.status.out['3xx'], 
               dt.status.out['4xx'], 
               dt.status.out['5xx'], 
-              100 - (dt.status.out['2xx'] + dt.status.out['3xx'] + dt.status.out['4xx'] + dt.status.out['5xx'])]
+              0 === sum ? 0 : 100 - sum]
           });
         }
         setData(preparedData.datasets.length > 0 ? preparedData : {});

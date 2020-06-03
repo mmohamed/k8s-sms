@@ -19,7 +19,7 @@ data:
       db = connect()
       if db != None:
         cursor = db.cursor()
-        cursor.execute("INSERT INTO registration (host, pod, namespace, ip, endpoint) VALUES (%s, %s, %s, %s, %s)", (content['host'], content['name'], content['namespace'], content['ip'], content['endpoint']))
+        cursor.execute("INSERT INTO registration (host, pod, namespace, ip, groupname, service, port) VALUES (%s, %s, %s, %s, %s, %s, %s)", (content['host'], content['name'], content['namespace'], content['ip'], content['group'], content['service'], content['port']))
         db.commit()
       else:
         return json.dumps({"status": False, "message": "Unable to connect to master db"})

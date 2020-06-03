@@ -13,7 +13,7 @@ class AuthService {
     }
 
     getAuthHeader() {
-       return {headers: {Authorization: 'Bearer ' + this.getUserInfo().token }};
+       return {headers: {Authorization: 'JWT ' + this.getUserInfo().token }};
     }
 
     logOut() {

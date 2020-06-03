@@ -42,7 +42,7 @@ const Service = props => {
         {data.map((row) => (
         <li key={row.id}>
             <Chip
-            avatar={<Avatar>{(row.id).substring(0, 2).toUpperCase()}</Avatar>}
+            avatar={<Avatar>{String(row.id).substring(0, 2).toUpperCase()}</Avatar>}
             color='primary'
             //style={{backgroundColor: palette.error.main}}
             label={row.name}

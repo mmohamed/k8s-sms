@@ -24,14 +24,14 @@ const HTTPTrafic = props => {
         if(dt.trafic && dt.trafic.in){
             preparedData.push({
                 'direction': 'In', 
-                'perSecond': dt.trafic.in.perSecond, 
+                'time': dt.trafic.in.time, 
                 'success': dt.trafic.in.success, 
                 'error': dt.trafic.in.error});
         }
         if(dt.trafic && dt.trafic.out){
             preparedData.push({
                 'direction': 'Out', 
-                'perSecond': dt.trafic.out.perSecond, 
+                'time': dt.trafic.out.time, 
                 'success': dt.trafic.out.success, 
                 'error': dt.trafic.out.error});
         }
@@ -47,7 +47,7 @@ const HTTPTrafic = props => {
             <TableHead>
                 <TableRow>
                     <TableCell></TableCell>
-                    <TableCell className={classes.cell} align="right">Total</TableCell>
+                    <TableCell className={classes.cell} align="right">(AVG S) Time</TableCell>
                     <TableCell className={classes.cell} align="right">% Success</TableCell>
                     <TableCell className={classes.cell} align="right">% Error</TableCell>
                 </TableRow>
@@ -56,7 +56,7 @@ const HTTPTrafic = props => {
                 {data.map((row) => (
                 <TableRow key={row.direction}>
                     <TableCell className={classes.cell} component="th" scope="row">{row.direction}</TableCell>
-                    <TableCell className={classes.cell} align="right">{row.perSecond}</TableCell>
+                    <TableCell className={classes.cell} align="right">{row.time}</TableCell>
                     <TableCell className={classes.cell} align="right">{row.success}</TableCell>
                     <TableCell className={classes.cell} align="right">{row.error}</TableCell>
                 </TableRow>

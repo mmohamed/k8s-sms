@@ -5,6 +5,7 @@ import { ViewEngine } from './../../sms/ViewEngine';
 import Loader from '../../components/Common/Loader';
 import SMSService from '../../services/SMSService';
 import Notification from '../../components/Common/Notification';
+import AuthService from '../../services/AuthService';
 
 class Dashboard extends React.Component{
   
@@ -29,11 +30,11 @@ class Dashboard extends React.Component{
         this.setState({loading: false, error : res.data.message});
       }
     }).catch(error => {
+      if(401 === error.response.status){
+        AuthService.logOut();
+        return this.props.history.push('/');
+      }
       this.setState({loading: false, error : 'Unable to contact server !'});
-      // import data from './../../data.json';
-      /*this.viewEngine.load(data, () => {
-        this.setState({loading: false});
-      });*/
     });
   }
 

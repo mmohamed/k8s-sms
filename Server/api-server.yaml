@@ -1,0 +1,322 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-server-files
+  namespace: kube-sms
+data:
+  server: |
+    from flask import Flask, json
+    from flask_jwt import JWT, jwt_required, current_identity
+    from flask_cors import CORS, cross_origin
+    from werkzeug.security import safe_str_cmp
+    from mysql.connector import Error
+    from datetime import timedelta
+    import mysql.connector
+    import os
+
+    class User(object):
+        def __init__(self, id, username, password):
+            self.id = id
+            self.username = username
+            self.password = password
+
+    if not os.environ.get("USERNAME") or not os.environ.get("PASSWORD"):
+        raise RuntimeError('Username and password environment variables must be defined for security access')
+    admin = User(1, os.environ.get("USERNAME"), os.environ.get("PASSWORD"))
+
+    def identity(payload):
+        return admin
+
+    def authenticate(username, password):
+        if safe_str_cmp(admin.password.encode('utf-8'), password.encode('utf-8')):
+            return admin
+
+    api = Flask(__name__)
+    api.debug = True if os.environ.get("DEBUG") else False
+    api.config['SECRET_KEY'] = os.environ.get("JWT_SECRET") if os.environ.get("JWT_SECRET") else 'static-jwt-secret'
+    api.config['CORS_HEADERS'] = 'Content-Type'
+    api.config['JWT_EXPIRATION_DELTA'] = timedelta(seconds=300)
+    cors = CORS(api)
+    jwt = JWT(api, authenticate, identity)
+    conn = None
+
+    @cross_origin()
+    @api.route('/get', methods=['OPTIONS'])
+    def getOption():
+        return 'OPTIONS'
+        
+    @cross_origin()
+    @api.route('/get', methods=['GET'])
+    @jwt_required()
+    def get():
+        data = {'ingress': False, 'nodes': [], 'links': []}
+
+        db = connect()
+        if db == None:
+            return json.dumps({"status": False, "message": "Unable to connect to master db"})
+            
+        cursor = db.cursor()
+        cursor.execute("SELECT * FROM node")
+        list = cursor.fetchall()
+        columns = cursor.description
+
+        for row in list:
+            node = associate(row, columns)
+
+            metadata = getMetadata(node)
+            services = getService(node)
+            trafic = getTrafic(node, services)
+            status = getStatus(node, services)
+
+            data['nodes'].append({
+                'id': node['id'], 
+                'name': node['name'], 
+                'disabled': False if 1 == node['active'] else True,
+                'services': services, 
+                'metadata': metadata,
+                'trafic' : trafic,
+                'status': status})
+
+        cursor.execute("SELECT * FROM link")
+        list = cursor.fetchall()
+        columns = cursor.description
+
+        for row in list:
+            link = associate(row, columns)
+            if int(link['from_node_id']) == 0:
+                data['ingress'] = True
+            data['links'].append({
+                'from': str(link['from_node_id'])+'#'+str(link['from_id']) if int(link['from_node_id']) != 0 else 'ingress', 
+                'to': str(link['to_id'])})
+                
+        return json.dumps(data)
+
+    def getStatus(node, services):
+        db = connect()
+        cursor = db.cursor()
+        inQuery = """SELECT COUNT(*) AS count , 
+            SUM(CASE WHEN SUBSTRING(code, 1, 1) = '2' THEN 1 ELSE 0 END) AS 2xx, 
+            SUM(CASE WHEN SUBSTRING(code, 1, 1) = '3' THEN 1 ELSE 0 END) AS 3xx,
+            SUM(CASE WHEN SUBSTRING(code, 1, 1) = '4' THEN 1 ELSE 0 END) AS 4xx, 
+            SUM(CASE WHEN SUBSTRING(code, 1, 1) = '5' THEN 1 ELSE 0 END) AS 5xx
+            FROM request WHERE to_id = %s
+        """
+        cursor.execute(inQuery, (node['id'],))
+        row = cursor.fetchone()
+        columns = cursor.description
+        statusIn = associate(row, columns)
+
+        serviceIds = []
+        for service in services:
+            serviceIds.append(str(service['id']))
+        
+        outQuery = """SELECT COUNT(*) AS count , 
+            SUM(CASE WHEN SUBSTRING(code, 1, 1) = '2' THEN 1 ELSE 0 END) AS 2xx, 
+            SUM(CASE WHEN SUBSTRING(code, 1, 1) = '3' THEN 1 ELSE 0 END) AS 3xx,
+            SUM(CASE WHEN SUBSTRING(code, 1, 1) = '4' THEN 1 ELSE 0 END) AS 4xx, 
+            SUM(CASE WHEN SUBSTRING(code, 1, 1) = '5' THEN 1 ELSE 0 END) AS 5xx
+            FROM request WHERE from_id IN ("""+','.join(serviceIds)+ """)
+        """
+        cursor.execute(outQuery)
+        row = cursor.fetchone()
+        columns = cursor.description
+        statusOut = associate(row, columns)
+        
+        inState = {}
+        index = ['2xx', '3xx', '4xx', '5xx']
+        for column in index:
+            inState[column] = round(100 * int(statusIn[column]) / int(statusIn['count'])) if statusIn['count'] and int(statusIn['count']) > 0 else 0
+        outState = {}
+        for column in index:
+            outState[column] = round(100 * int(statusOut[column]) / int(statusOut['count'])) if statusOut['count'] and int(statusOut['count']) > 0 else 0
+        return {'in' : inState, 'out': outState} 
+
+    def getTrafic(node, services):
+        db = connect()
+        cursor = db.cursor()
+        cursor.execute("SELECT AVG(request_time) FROM request WHERE to_id = %s", (node['id'],))
+        inTime = cursor.fetchone()
+        cursor.execute("SELECT AVG(response_time) FROM request WHERE to_id = %s", (node['id'],))
+        outTime = cursor.fetchone()
+        inQuery = """SELECT COUNT(*) AS count , SUM(CASE WHEN SUBSTRING(code, 1, 1) != '5' THEN 1 ELSE 0 END) 
+            AS success, SUM(CASE WHEN SUBSTRING(code, 1, 1) = '5' THEN 1 ELSE 0 END) AS error 
+            FROM request WHERE to_id = %s
+        """
+        cursor.execute(inQuery, (node['id'],))
+        row = cursor.fetchone()
+        columns = cursor.description
+        stateIn = associate(row, columns)
+
+        serviceIds = []
+        for service in services:
+            serviceIds.append(str(service['id']))
+
+        outQuery = """SELECT COUNT(*) AS count , SUM(CASE WHEN SUBSTRING(code, 1, 1) != '5' THEN 1 ELSE 0 END) 
+            AS success, SUM(CASE WHEN SUBSTRING(code, 1, 1) = '5' THEN 1 ELSE 0 END) AS error 
+            FROM request WHERE from_id IN (""" + ','.join(serviceIds) +""")
+        """
+        cursor.execute(outQuery)
+        row = cursor.fetchone()
+        columns = cursor.description
+        stateOut = associate(row, columns)
+        return {
+            'in' : {
+                'time': round(inTime[0], 3), 
+                'success': round(100 * int(stateIn['success']) / int(stateIn['count'])) if int(stateIn['count']) > 0 else 0, 
+                'error': round(100 * int(stateIn['error']) / int(stateIn['count'])) if int(stateIn['count']) > 0 else 0},
+            'out' : {
+                'time': round(outTime[0], 3), 
+                'success': round(100 * int(stateOut['success']) / int(stateOut['count'])) if int(stateOut['count']) > 0 else 0, 
+                'error': round(100 * int(stateOut['error']) / int(stateOut['count'])) if int(stateOut['count']) > 0 else 0}
+        } 
+
+    def getService(node):
+        db = connect()
+        services = []
+        cursor = db.cursor()
+        cursor.execute("SELECT * FROM registration WHERE groupname = %s", (node['name'],))
+        list = cursor.fetchall()
+        columns = cursor.description
+        for row in list:
+            service = associate(row, columns)
+            services.append({
+                'name': service['service'] if service['service'] else service['pod'] ,
+                'id': service['id'],
+                'host': service['host'],
+                'pod': service['pod'],
+                'ip': service['ip'],
+                'port': service['port'],
+                'namespace': service['namespace'],
+                'active' : True if 1 == service['active'] else False
+            })
+        return services
+
+    def getMetadata(node):
+        return [
+            {'name': 'Group ID', 'value' : '#'+str(node['id'])},
+            {'name': 'Group name', 'value' : node['name']},
+            {'name': 'Creation date', 'value' : node['created_at']}
+        ]
+
+    def connect():
+        global conn
+        if conn != None and conn.is_connected():
+            return conn
+        conn = None
+        try:
+            conn = mysql.connector.connect(host=os.environ["DB_HOST"], database=os.environ["DB_NAME"], user=os.environ["DB_USER"],password=os.environ["DB_PASSWORD"])
+            if conn.is_connected():
+                return conn
+            return None
+        except Error as e:
+            return None
+
+    def associate(data, columns):
+        row = {}
+        for (index,column) in enumerate(data):
+            row[columns[index][0]] = column
+        return row
+
+    if __name__ == '__main__':
+        api.run(host='0.0.0.0')
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-server
+  namespace: kube-sms
+spec:
+  selector:
+    matchLabels:
+      run: api
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        run: api
+    spec:
+      containers:
+      - name: server
+        image: python
+        command: ['sh', '-c', 'pip install flask Flask-JWT flask_cors mysql.connector && python /var/static/server']
+        ports:
+          - containerPort: 5000
+        volumeMounts:
+          - name: static-volume
+            mountPath: /var/static
+        env:
+          - name: DEBUG
+            value: "1"
+          - name: USERNAME
+            value: mmo@medinvention.dev
+          - name: PASSWORD
+            value: mmo
+          - name: DB_NAME
+            value: logs
+          - name: DB_HOST
+            value: db-service.kube-sms.svc.cluster.local
+          - name: DB_USER
+            valueFrom:
+              secretKeyRef:
+                name: dbsecret
+                key: username
+          - name: DB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: dbsecret
+                key: password
+      volumes:
+        - name: static-volume
+          configMap:
+            name: api-server-files
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-server-service
+  namespace: kube-sms
+spec:
+  ports:
+  - name: http
+    port: 80
+    targetPort: 5000
+  selector:
+    run: api
+
+---   
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sms-tls
+  namespace: kube-sms
+type: Opaque  
+data:
+  tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUZYRENDQkVTZ0F3SUJBZ0lTQStJNkJHSmt3cGtibzUyTER0TjQzZ0p3TUEwR0NTcUdTSWIzRFFFQkN3VUEKTUVveEN6QUpCZ05WQkFZVEFsVlRNUll3RkFZRFZRUUtFdzFNWlhRbmN5QkZibU55ZVhCME1TTXdJUVlEVlFRRApFeHBNWlhRbmN5QkZibU55ZVhCMElFRjFkR2h2Y21sMGVTQllNekFlRncweU1EQTBNakV4TnpNM01ERmFGdzB5Ck1EQTNNakF4TnpNM01ERmFNQjB4R3pBWkJnTlZCQU1NRWlvdWJXVmthVzUyWlc1MGFXOXVMbVJsZGpDQ0FTSXcKRFFZSktvWklodmNOQVFFQkJRQURnZ0VQQURDQ0FRb0NnZ0VCQUs0bDZrYS91TUV5Q0pvdjhHS3kvU1orN21EVQo4bVc0WHhSaVF1R0lyRzFDdzRLVUNGbStkWG0vR2Y2OU5hUmZxWm9BYyt2azcrdFhvYksrMUR6Nmxuekdod0hYCkhDdG03NDhzTDZsMmQxTkc5NC9aYkVyMFJRZkFVelcwcVBIZU95bFBNdTErdXRuNjFKUFYxTk5MNnVMQW1NV2QKdGdlaTBtNjVqTnE1UVVRd1NMcTh0MUxWUkdIcWlGOVcxRUZHSGVJNi9TYVdYNXZyWmxNYVZRNkttZ01wd1hkZAo5WStqTkpZUEVxK2g1TXBnZGtVRDh0U0liS0VzY21KbFYyVlpXNUt1TmxRY0FqMVhhWm15NWJWanNBZktnVXN0ClY3d1JqNkFMaVZiQzFvWVlMU3pZaHFKalV4VXdGTTJ3c29HZUpLQ1Y4Nk9iTkpsSHUxaEZDbWlsZFhFQ0F3RUEKQWFPQ0FtY3dnZ0pqTUE0R0ExVWREd0VCL3dRRUF3SUZvREFkQmdOVkhTVUVGakFVQmdnckJnRUZCUWNEQVFZSQpLd1lCQlFVSEF3SXdEQVlEVlIwVEFRSC9CQUl3QURBZEJnTlZIUTRFRmdRVWZ1dVNpbHVPYnN3MDlYVXB5dTd0CkIxOXNWMzR3SHdZRFZSMGpCQmd3Rm9BVXFFcHFZd1I5M2JybTBUbTNwa1ZsNy9PbzdLRXdid1lJS3dZQkJRVUgKQVFFRVl6QmhNQzRHQ0NzR0FRVUZCekFCaGlKb2RIUndPaTh2YjJOemNDNXBiblF0ZURNdWJHVjBjMlZ1WTNKNQpjSFF1YjNKbk1DOEdDQ3NHQVFVRkJ6QUNoaU5vZEhSd09pOHZZMlZ5ZEM1cGJuUXRlRE11YkdWMGMyVnVZM0o1CmNIUXViM0puTHpBZEJnTlZIUkVFRmpBVWdoSXFMbTFsWkdsdWRtVnVkR2x2Ymk1a1pYWXdUQVlEVlIwZ0JFVXcKUXpBSUJnWm5nUXdCQWdFd053WUxLd1lCQkFHQzN4TUJBUUV3S0RBbUJnZ3JCZ0VGQlFjQ0FSWWFhSFIwY0RvdgpMMk53Y3k1c1pYUnpaVzVqY25sd2RDNXZjbWN3Z2dFRUJnb3JCZ0VFQWRaNUFnUUNCSUgxQklIeUFQQUFkd0N5CkhnWE1pNkxOaWlCT2gyYjVLN21LSlNCbmE5cjZjT2V5U1ZNdDc0dVFYZ0FBQVhHZUIzVjFBQUFFQXdCSU1FWUMKSVFDVTZGb3BURS9SbHltbE9IcEIwTFpMbzdldG1KMUZzQTBSNnlabGp1aUoyZ0loQUtnbmZmNDdxREZRN0ZZNApJZDlsd2JFZnhYQnJaeUtoa2xGOVhHTW1pMDIvQUhVQTV4THlzRGQrR21MN2pza01ZWVR4Nm5zM3kxWWRFU1piCjgrRHpTL0pCVkc0QUFBRnhuZ2Qxa2dBQUJBTUFSakJFQWlBc3FwVTFZSHE1MUFEY1VQcG5Pd1NiSWxYUUE4enMKWko0aWVEdkhPL0c2c0FJZ2ZQWkdBa3VXYSsvQ2gzVVZWc01DN0x1S3VlUUFGZ2dBelpuRTZpY1hwVmd3RFFZSgpLb1pJaHZjTkFRRUxCUUFEZ2dFQkFDVWNzRUNwZkNZdFl5OGhITHRFenpIb21laGUyRGZGZlBveUVkU3NGQUJQCm9lMDFzcVNOWVh1VktFcy9ySmkzSExmdlhsWEtOUzgwTEw0bU1Mc0NrUEFDcSsxNTJmMGhIT2JKQTVzM2RNRS8KemFIUjR1eHBwcjRNSTViall0bWUzUzBpUW8wUVI4K2JoMkJlczYzS244MDBrdVk5M1Y3RmdqM2o3MlVVdmZOaApvRlNwNmMySnl6aDRHejNnZkpkbGhUa2tKb2haMjZNZHhTb2d3NncwQU5HQzhYNmd0YVJBU2xBRENEYTVWU3gyCnR0eDF6MmQ5VW9pczdOcEMvRjRKWi9Ia1ZINHJaekUyRHZTZUdWaW1YdXhBalZ5QjNxcGpxWkRVTk9USm5Lc2IKSlpuMUgzL0ZzREExTlpPQi8vaHByUkZNMmxSdnlFaWJYekRKWTlxMEJNbz0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQotLS0tLUJFR0lOIENFUlRJRklDQVRFLS0tLS0KTUlJRWtqQ0NBM3FnQXdJQkFnSVFDZ0ZCUWdBQUFWT0ZjMm9MaGV5bkNEQU5CZ2txaGtpRzl3MEJBUXNGQURBLwpNU1F3SWdZRFZRUUtFeHRFYVdkcGRHRnNJRk5wWjI1aGRIVnlaU0JVY25WemRDQkRieTR4RnpBVkJnTlZCQU1UCkRrUlRWQ0JTYjI5MElFTkJJRmd6TUI0WERURTJNRE14TnpFMk5EQTBObG9YRFRJeE1ETXhOekUyTkRBME5sb3cKU2pFTE1Ba0dBMVVFQmhNQ1ZWTXhGakFVQmdOVkJBb1REVXhsZENkeklFVnVZM0o1Y0hReEl6QWhCZ05WQkFNVApHa3hsZENkeklFVnVZM0o1Y0hRZ1FYVjBhRzl5YVhSNUlGZ3pNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DCkFROEFNSUlCQ2dLQ0FRRUFuTk1NOEZybExrZTNjbDAzZzdOb1l6RHExelVtR1NYaHZiNDE4WENTTDdlNFMwRUYKcTZtZU5RaFk3TEVxeEdpSEM2UGpkZVRtODZkaWNicDVnV0FmMTVHYW4vUFFlR2R4eUdrT2xaSFAvdWFaNldBOApTTXgreWsxM0VpU2RSeHRhNjduc0hqY0FISnlzZTZjRjZzNUs2NzFCNVRhWXVjdjliVHlXYU44aktrS1FESVowClo4aC9wWnE0VW1FVUV6OWw2WUtIeTl2NkRsYjJob256aFQrWGhxK3czQnJ2YXcyVkZuM0VLNkJsc3BrRU5uV0EKYTZ4Szh4dVFTWGd2b3BaUEtpQWxLUVRHZE1EUU1jMlBNVGlWRnJxb003aEQ4YkVmd3pCL29ua3hFejB0TnZqagovUEl6YXJrNU1jV3Z4STBOSFdRV002cjZoQ20yMUF2QTJIM0Rrd0lEQVFBQm80SUJmVENDQVhrd0VnWURWUjBUCkFRSC9CQWd3QmdFQi93SUJBREFPQmdOVkhROEJBZjhFQkFNQ0FZWXdmd1lJS3dZQkJRVUhBUUVFY3pCeE1ESUcKQ0NzR0FRVUZCekFCaGlab2RIUndPaTh2YVhOeVp5NTBjblZ6ZEdsa0xtOWpjM0F1YVdSbGJuUnlkWE4wTG1OdgpiVEE3QmdnckJnRUZCUWN3QW9ZdmFIUjBjRG92TDJGd2NITXVhV1JsYm5SeWRYTjBMbU52YlM5eWIyOTBjeTlrCmMzUnliMjkwWTJGNE15NXdOMk13SHdZRFZSMGpCQmd3Rm9BVXhLZXhwSHNzY2ZyYjRVdVFkZi9FRldDRmlSQXcKVkFZRFZSMGdCRTB3U3pBSUJnWm5nUXdCQWdFd1B3WUxLd1lCQkFHQzN4TUJBUUV3TURBdUJnZ3JCZ0VGQlFjQwpBUllpYUhSMGNEb3ZMMk53Y3k1eWIyOTBMWGd4TG14bGRITmxibU55ZVhCMExtOXlaekE4QmdOVkhSOEVOVEF6Ck1ER2dMNkF0aGl0b2RIUndPaTh2WTNKc0xtbGtaVzUwY25WemRDNWpiMjB2UkZOVVVrOVBWRU5CV0RORFVrd3UKWTNKc01CMEdBMVVkRGdRV0JCU29TbXBqQkgzZHV1YlJPYmVtUldYdjg2anNvVEFOQmdrcWhraUc5dzBCQVFzRgpBQU9DQVFFQTNUUFhFZk5qV0RqZEdCWDdDVlcrZGxhNWNFaWxhVWNuZThJa0NKTHhXaDlLRWlrM0pIUlJIR0pvCnVNMlZjR2ZsOTZTOFRpaFJ6WnZvcm9lZDZ0aTZXcUVCbXR6dzNXb2RhdGcrVnlPZXBoNEVZcHIvMXdYS3R4OC8Kd0FwSXZKU3d0bVZpNE1GVTVhTXFyU0RFNmVhNzNNajJ0Y015bzVqTWQ2am1lV1VISzhzby9qb1dVb0hPVWd3dQpYNFBvMVFZeiszZHN6a0RxTXA0ZmtseEJ3WFJzVzEwS1h6UE1UWitzT1BBdmV5eGluZG1qa1c4bEd5K1FzUmxHClBmWitHNlo2aDdtamVtMFkraVdsa1ljVjRQSVdMMWl3Qmk4c2FDYkdTNWpOMnA4TStYK1E3VU5LRWtST2IzTjYKS09xa3FtNTdUSDJIM2VESkFrU25oNi9ETkZ1MFFnPT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+  tls.key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2QUlCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktZd2dnU2lBZ0VBQW9JQkFRQ3VKZXBHdjdqQk1naWEKTC9CaXN2MG1mdTVnMVBKbHVGOFVZa0xoaUt4dFFzT0NsQWhadm5WNXZ4bit2VFdrWDZtYUFIUHI1Ty9yVjZHeQp2dFE4K3BaOHhvY0IxeHdyWnUrUExDK3BkbmRUUnZlUDJXeEs5RVVId0ZNMXRLangzanNwVHpMdGZyclordFNUCjFkVFRTK3Jpd0pqRm5iWUhvdEp1dVl6YXVVRkVNRWk2dkxkUzFVUmg2b2hmVnRSQlJoM2lPdjBtbGwrYjYyWlQKR2xVT2lwb0RLY0YzWGZXUG96U1dEeEt2b2VUS1lIWkZBL0xVaUd5aExISmlaVmRsV1Z1U3JqWlVIQUk5VjJtWgpzdVcxWTdBSHlvRkxMVmU4RVkrZ0M0bFd3dGFHR0MwczJJYWlZMU1WTUJUTnNMS0JuaVNnbGZPam16U1pSN3RZClJRcG9wWFZ4QWdNQkFBRUNnZ0VBSExMQzJNWGZmSGJ5VS9aeWR0Rm9SbC9FaU5DTzRaUndscnRhcWpBTHVqVzIKWWw1aXdlZFJGSzhaYVpGa3RhSE9JVUxSMTUzeXE2WFZUOCtDeWtuQll1NlVjUWt4NnpVYlpVeXl6Z3BudjZHQwpTb0phQmtBYTRCd2hta2diVDBDQUgxNmQxZVY4aFUrQW1KdzBabDJzWjVHMW0xdFNGQkFRL1k0MldCVVBYRjBTCjlTMmZkN1ViajFYM2VFTldVUEo3aWt2MXhMWVBYeDllWXpaKzNyNEp4U1poSjdId2xyVHZPYkJ5VlRVbGxIOEwKS24yaGYzT05MT2pudWxSR0xWbWhDU2daQjl4SWFTYzlrNGQwTkpETmlhUXBIUnp0L2wvdUIrUWNWS1k1SklVcApFQ2Zqc0ZVYmovaTBVL3lhdloxYnZoVFByc1pXdlhEQ3lhOHFzeFMyd1FLQmdRRGRER0tSU3NMSGdIWUhNVEpiCmpSU0dIQkxCU2cvSDZCM2V0dGU0NHQ5aDE5VFNiTHFSL3ZRVktjMXVGR0x5cmRpOTFDVUMzL0lKYXExRExCbTUKUm9aekpyRTlCTmtRd2NxUjhqS2RmUVpwbHkyT3NxVW1jaGU5ZEpRMHNNMVZVdVBXejYzTnRsQWpMdFF4c29aaApGNmZpdTRqa1c0WVplTGh4MDFjdXRjbmhWd0tCZ1FESnJ4ak9TOW5tbHJSd0o5RnlpTC9sK2xFeE9ld2pKWnhJCitLOEhZSFdLeGEvT2VJelE5MVVaQWhKVWN0MzZteGZZMU1scUpXUm53TWhGZ3dBaUVHcW1YVndkdURDN2Y3cnoKMSsxVFVDT1Q4TU13QVhHTmoyMzFvb0MyU2g0alJMREtxNmFtSk1GZFNtSGFkaXBaSXRrMlB1d2QvTmlzU3p6NwpoZ1ZFczBBNmR3S0JnRTZHSk1tNlJpRTYyRExMM2ppNWtFM24wUjNLNG5wQVVjUVpMZDdtOFRXL3gwR05FR1htCnJPeUxzZ2RseEpTeS95aklJUEc1ZmpDc0xhcU1Fd05ITTJIYW4rR3VSREg0dGE1TTNJQW50c3h4d09STlArKzkKWGdPV1UwTzRmdWpOamxSejZDa0lsOFUzMEhkckZPT08xTHZ0cEw2Q2FNdkpuN1FId0pPK1RsMzNBb0dBWWc0dQpXa1pJaDdLbndZdXFhaXdRV0lqT0pzZkpoZ0VJTGZZeWFyeThDUjg1N1lGd3ZUd3k5SGlzWHNDR0tneHptS2xECno4YWtQVWxlVldWdWtDRTVLTzlsRk5Ielo0V2ZhR1NIN3lTY1Y1WUwzL0FqdkRhS3VJMHNWUFJPR01tUnhzZVQKdTExTlljVURORXFWSmtjcUloU1BpYmpmdzB6Rk5taWZjUnBSVk5zQ2dZQlZWR3RydHZhR0lwekEydEVobDFYVgpRditmSUtQMXZrSncxSHpnMTZ5Lzk1SXp4V1orTXBBUHgxV1h4RzZGNzBTYmFvUlVRbzY1eXd5OUYvUy9HVHVKCmxpQU0zbnU2akRBKzV6cFR3SHhpam9qYkRXSFI3Ri9wWmhJdndJTEJvT2NXZlBKeHQ4OWhKWGhyRGthOHdQUkgKay8ycmFpMHdzY09IaStYNUNvbVNMUT09Ci0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K
+type: kubernetes.io/tls
+
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: nginx
+  name: api-server-ingress
+  namespace: kube-sms
+  labels:
+    run: api
+spec:
+  rules:
+    - host: api-sms.medinvention.dev
+      http:
+        paths:
+          - backend:
+              serviceName: api-server-service
+              servicePort: http
+            path: /
+  tls:
+    - hosts:
+      - api-sms.medinvention.dev
+      secretName: sms-tls

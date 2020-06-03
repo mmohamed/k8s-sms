@@ -69,7 +69,7 @@ export class ViewEngine {
         }
         let isFront = false;
         links.forEach(link => {
-            if(link.from === "ingress" && link.to === node.id){
+            if(link.from === "ingress" && String(link.to) === String(node.id)){
                 isFront = true;
             }
         });
@@ -143,12 +143,12 @@ export class ViewEngine {
         let ids = id.split("#");
         let target = null;
         this.nodes.forEach(node => {
-            if(ids[0] === node.id){
+            if(String(ids[0]) === String(node.id)){
                 if(ids.length === 1 && node.out.length === 1){
                     target = node.out[0].port;
                 }else if(ids.length === 2){
                     node.out.forEach(port => {
-                        if(port.id === ids[1])
+                        if(String(port.id) === String(ids[1]))
                             target= port.port; 
                     });
                 }
@@ -160,7 +160,7 @@ export class ViewEngine {
     __getNodeById(id){
         let target = null;
         this.nodes.forEach(node => {
-            if(node.id === id)
+            if(String(node.id) === String(id))
                 target = node;
         });
         return target;
