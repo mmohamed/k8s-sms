@@ -12,8 +12,10 @@ data:
       namespace VARCHAR(255) NOT NULL,
       pod VARCHAR(255) NOT NULL,
       ip VARCHAR(15) NOT NULL,
-      endpoint VARCHAR(15) DEFAULT NULL,
       active BOOLEAN DEFAULT TRUE,
+      groupname VARCHAR(255) NOT NULL,
+      service VARCHAR(255) NOT NULL,
+      port INT(6) NOT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP
     );
@@ -32,6 +34,34 @@ data:
       host VARCHAR(255) NOT NULL,
       ident VARCHAR(30) NOT NULL,
       message TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    DROP TABLE IF EXISTS link;
+    CREATE TABLE link (
+      id INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+      from_node_id INT(6) UNSIGNED NOT NULL,
+      from_id INT(6) UNSIGNED NOT NULL,
+      to_id INT(6) UNSIGNED NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX linkidx ON link(from_node_id, from_id, to_id);
+    DROP TABLE IF EXISTS request;
+    CREATE TABLE request (
+      id INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+      link INT(6) UNSIGNED NOT NULL,
+      from_id INT(6) UNSIGNED NOT NULL,
+      to_id INT(6) UNSIGNED NOT NULL,
+      code VARCHAR(3) NOT NULL,
+      at TIMESTAMP NOT NULL, 
+      request_time FLOAT NOT NULL,
+      response_time FLOAT NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    DROP TABLE IF EXISTS node;
+    CREATE TABLE node (
+      id INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      active BOOLEAN DEFAULT TRUE,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
 ---
@@ -120,7 +150,7 @@ spec:
           lifecycle:
             postStart:
               exec:
-                command: ['/bin/sh', '-c', 'sleep 30 && mysql logs -uroot -p"$MYSQL_ROOT_PASSWORD" < /var/db.sql > /tmp/db.log &']
+                command: ['/bin/sh', '-c', 'sleep 90 && mysql logs -uroot -p"$MYSQL_ROOT_PASSWORD" < /var/db.sql > /tmp/db.log 2>&1 &']
           volumeMounts:
             - name: db-persistent-storage
               mountPath: /var/lib/mysql

@@ -1,0 +1,10 @@
+---   
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sms-tls
+  namespace: kube-sms
+data:
+  tls.crt: {{tls-crt}}
+  tls.key: {{tls-key}}
+type: kubernetes.io/tls

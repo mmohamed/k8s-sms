@@ -1,2 +1,5 @@
 Build/*
 !Build/.gitkeep
+**/*.pyc
+Server/*.yaml
+Server/*.sh
