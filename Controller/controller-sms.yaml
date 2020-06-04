@@ -1,0 +1,42 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: controller
+  namespace: kube-sms
+spec:
+  selector:
+    matchLabels:
+      run: controller
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        run: controller
+    spec:
+      serviceAccountName: controller-access
+      containers:
+      - name: controller
+        image: medinvention/sms-controller
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+    labels:
+    name: controller-access
+    namespace: kube-sms
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+    name: controller-access
+roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: ClusterRole
+    name: cluster-admin
+subjects:
+    - kind: ServiceAccount
+      name: controller-access
+      namespace: kube-sms

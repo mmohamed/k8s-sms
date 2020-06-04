@@ -1,5 +1,4 @@
 from kubernetes import client, config, watch
-
 from kubernetes.client.rest import ApiException
 
 import logging
@@ -18,7 +17,7 @@ out_hdlr.setLevel(logging.INFO)
 log.addHandler(out_hdlr)
 log.setLevel(logging.INFO)
 
-# Configs can be set in Configuration class directly or using helper utility
+# config.load_incluster_config()
 config.load_kube_config()
 
 api_instance = client.AppsV1Api(client.ApiClient())
