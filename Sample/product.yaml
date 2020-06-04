@@ -1,0 +1,71 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: product-server
+  namespace: sample-sms
+data:
+  server: |
+    from flask import Flask, json
+    import requests
+    api = Flask(__name__)
+    @api.route('/', defaults={'version': 'v1'}, methods=['GET'])
+    @api.route('/<version>', methods=['GET'])
+    def get(version):
+      detail = requests.get('http://detail-service.sample-sms.svc.cluster.local:5000')
+      if detail.status_code != 200:
+        raise Error('GET detail {}'.format(detail.status_code))
+      review = requests.get('http://review-{}-service.sample-sms.svc.cluster.local:5000'.format(version))
+      if review.status_code != 200:
+        raise Error('GET review {}'.format(review.status_code))  
+      product = {'details': detail.json(), 'review': review.json()}
+      return json.dumps(product)
+    if __name__ == '__main__':
+      api.run()
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deployment-product
+  namespace: sample-sms
+  annotations:
+    medinvention.dev/sms.group: product
+    medinvention.dev/sms.port: "5000"
+    medinvention.dev/sms.service: product-service
+spec:
+  selector:
+    matchLabels:
+      app: product
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: product
+    spec:
+      containers:
+      - name: server
+        image: python
+        command: ['sh', '-c', 'pip install flask requests && python /var/static/server']
+        ports:
+          - containerPort: 5000
+        volumeMounts:
+          - name: product-server
+            mountPath: /var/static
+      volumes:
+        - name: product-server
+          configMap:
+            name: product-server
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: product-service
+  namespace: sample-sms
+spec:
+  ports:
+  - name: http
+    port: 5000
+    targetPort: 5000
+  selector:
+    app: product
