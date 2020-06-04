@@ -104,6 +104,10 @@ data:
                 return None
         else:
             logger().info("Invalid request {}".format(request))
+            cursor = connection.cursor()
+            cursor.execute("INSERT INTO error (host, ident, message) VALUES (%s, 'processor', %s)", (request['host'], request['message']))
+            cursor.execute("DELETE FROM access WHERE id = %s", (request['id'], ))
+            connection.commit()
             return False
 
     def createLink(fromNodeID, fromID, toID):

@@ -199,6 +199,7 @@ export class ViewEngine {
                 engine.getLinkFactories().getFactory(PathFindingLinkFactory.NAME).calculateRoutingMatrix();
                 engine.repaintCanvas();
                 engine.zoomToFitNodes(100);
+                model.setLocked(true);
                 if('function' === typeof callback){
                     callback()
                 }
