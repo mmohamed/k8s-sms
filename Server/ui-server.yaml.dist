@@ -41,7 +41,7 @@ spec:
         run: ui
     spec:
       containers:
-      - name: front
+      - name: ui-server
         image: medinvention/k8s-sms-ui
         imagePullPolicy: Always
         ports:
