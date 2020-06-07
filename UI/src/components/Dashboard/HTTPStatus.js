@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { HorizontalBar } from 'react-chartjs-2';
 import { makeStyles } from '@material-ui/styles';
 import palette from './../../theme/palette';
@@ -19,8 +19,9 @@ const HTTPStatus = props => {
 
   const [data, setData] = useState({});
   
-  document.addEventListener(EVENT_NODE_SELECTION, function(event) { 
-    if(event.detail.isSelected){
+  useEffect(() => {
+    function handleChange(event) { 
+      if(event.detail.isSelected){
         let dt = event.detail.data.raw;
         let preparedData = {
           labels: ['OK', '3xx', '4xx', '5xx', 'Other'],
@@ -51,8 +52,13 @@ const HTTPStatus = props => {
           });
         }
         setData(preparedData.datasets.length > 0 ? preparedData : {});
-    }else{
+      }else{
         setData({});
+      }
+    }
+    document.addEventListener(EVENT_NODE_SELECTION, handleChange);
+    return function cleanup(){
+        document.removeEventListener(EVENT_NODE_SELECTION, handleChange);
     }
   });
 

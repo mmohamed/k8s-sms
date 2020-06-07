@@ -8,12 +8,16 @@ import { AppNodeModel } from '../node/AppNodeModel';
 import { IngressNodeModel } from '../node/IngressNodeModel';
 
 export const EVENT_NODE_SELECTION = 'app.event.node.selection';
+export const EVENT_ENGINE_RELOAD = 'app.event.engine.reload';
+export const EVENT_ENGINE_FILTER = 'app.event.engine.filter';
+export const EVENT_ENGINE_LOADED = 'app.event.engine.loaded';
 
 export class ViewEngine {
     
     engine;
     ingress;
     model;
+    dagre;
     nodes = [];
     links = [];
 
@@ -30,8 +34,17 @@ export class ViewEngine {
         this.model = new DiagramModel();
         // set model
         this.engine.setModel(this.model);
+        this.dagre = new DagreEngine({
+            graph: {
+                rankdir: 'LR',
+                ranker: 'network-simplex', // 'tight-tree, longest-path',
+                marginx: 100,
+                marginy: 100,
+                ranksep: 100, // horizontal sep
+            },
+            includeLinks: true
+        });
     }
-
 
     load(json, callback){
         // ingress
@@ -57,6 +70,55 @@ export class ViewEngine {
         }
         // distrube
         this.__distrube(callback);
+        // events
+        document.dispatchEvent( new CustomEvent(EVENT_ENGINE_LOADED, {
+            detail: { 
+                time: new Date().getTime(),
+                ingress: json.ingress ? true : false, 
+                nodes: json.nodes ? json.nodes : [], 
+                links: json.links ? json.links : [] 
+            }
+        }));
+    }
+
+    refresh(json, callback){
+        let selectedNode = this.model.getSelectedEntities();
+        this.model.clearSelection();
+        this.links.forEach((link) => {
+            this.model.removeLink(link);
+        }); 
+        this.nodes.forEach((node) => {
+            this.model.removeNode(node.node);
+        }); 
+        if(this.ingress){
+            this.model.removeNode(this.ingress);
+        }
+        this.ingress = null;
+        this.nodes = [];
+        this.links = [];
+        let thatModel = this.model;
+        let newCallback = function(){
+            if('function' === typeof callback){
+                callback()
+            }
+            // re-select node
+            if(selectedNode.length > 0){
+                if(selectedNode[0] instanceof IngressNodeModel){
+                    thatModel.getNodes().forEach((node) => {
+                        if(node instanceof IngressNodeModel){
+                            node.setSelected(true)
+                        }
+                    });
+                }else{
+                    thatModel.getNodes().forEach((node) => {
+                        if(node instanceof AppNodeModel && node.options.name === selectedNode[0].options.name){
+                            node.setSelected(true)
+                        }
+                    });
+                }
+            }
+        }
+        this.load(json, newCallback);
     }
 
     get(){
@@ -179,31 +241,21 @@ export class ViewEngine {
     __distrube(callback){
         let model = this.model;
         let engine = this.engine;
+        let dagre = this.dagre;
         setTimeout(function(){ // @see https://github.com/dagrejs/dagre/wiki
-            let dagre = new DagreEngine({
-              graph: {
-                rankdir: 'LR',
-                ranker: 'network-simplex', // 'tight-tree, longest-path',
-                marginx: 100,
-                marginy: 100,
-                ranksep: 100, // horizontal sep
-              },
-              includeLinks: true
-            });
             dagre.redistribute(model);
             engine.getLinkFactories().getFactory(PathFindingLinkFactory.NAME).calculateRoutingMatrix();
             engine.repaintCanvas();
             // for http delai, need redistribute.
             setTimeout(function(){
                 dagre.redistribute(model);
-                engine.getLinkFactories().getFactory(PathFindingLinkFactory.NAME).calculateRoutingMatrix();
                 engine.repaintCanvas();
                 engine.zoomToFitNodes(100);
                 model.setLocked(true);
                 if('function' === typeof callback){
                     callback()
                 }
-              }, 100);
-          }, 100);
+              }, 500);
+          }, 500);
     }
 }

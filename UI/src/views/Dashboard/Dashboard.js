@@ -1,7 +1,7 @@
 import React from 'react';
 import { CanvasWidget} from '@projectstorm/react-canvas-core';
 import BaseWidget from './../../BaseWidget'
-import { ViewEngine } from './../../sms/ViewEngine';
+import { ViewEngine, EVENT_ENGINE_RELOAD } from './../../sms/ViewEngine';
 import Loader from '../../components/Common/Loader';
 import SMSService from '../../services/SMSService';
 import Notification from '../../components/Common/Notification';
@@ -30,6 +30,20 @@ class Dashboard extends React.Component{
     }, function(){
       that.setState({loading: false });
       that.props.history.push('/');
+    });
+    // bind reload
+    document.addEventListener(EVENT_ENGINE_RELOAD, function(event) { 
+      that.setState({loading: true});
+      SMSService.get(function(data){
+        that.viewEngine.refresh(data, () => {
+          that.setState({loading: false});
+        });
+      }, function(message){
+        that.setState({loading: false, error : message});
+      }, function(){
+        that.setState({loading: false });
+        that.props.history.push('/');
+      });
     });
   }
 

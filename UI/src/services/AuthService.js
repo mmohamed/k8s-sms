@@ -42,6 +42,7 @@ class AuthService {
                     that.withAuth(method, path, data, options, onSuccess, onError, onAuthRequired, true)
                 }, onAuthRequired);
             }else{
+                console.debug(error);
                 if('function' == typeof onError){
                     onError('Unable to communicate with server !');
                 }

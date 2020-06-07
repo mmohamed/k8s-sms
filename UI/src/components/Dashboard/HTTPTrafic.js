@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { makeStyles } from '@material-ui/styles';
 import Alert from '@material-ui/lab/Alert';
 import { TableContainer, Paper, Table, TableHead, TableCell, TableRow, TableBody } from '@material-ui/core';
@@ -17,27 +17,33 @@ const HTTPTrafic = props => {
 
   const [data, setData] = useState([]);
   
-  document.addEventListener(EVENT_NODE_SELECTION, function(event) { 
-    if(event.detail.isSelected){
-        let dt = event.detail.data.raw;
-        let preparedData = [];
-        if(dt.trafic && dt.trafic.in){
-            preparedData.push({
-                'direction': 'In', 
-                'time': dt.trafic.in.time, 
-                'success': dt.trafic.in.success, 
-                'error': dt.trafic.in.error});
+  useEffect(() => {
+    function handleChange(event) { 
+        if(event.detail.isSelected){
+            let dt = event.detail.data.raw;
+            let preparedData = [];
+            if(dt.trafic && dt.trafic.in){
+                preparedData.push({
+                    'direction': 'In', 
+                    'time': dt.trafic.in.time, 
+                    'success': dt.trafic.in.success, 
+                    'error': dt.trafic.in.error});
+            }
+            if(dt.trafic && dt.trafic.out){
+                preparedData.push({
+                    'direction': 'Out', 
+                    'time': dt.trafic.out.time, 
+                    'success': dt.trafic.out.success, 
+                    'error': dt.trafic.out.error});
+            }
+            setData(preparedData);
+        }else{
+            setData([]);
         }
-        if(dt.trafic && dt.trafic.out){
-            preparedData.push({
-                'direction': 'Out', 
-                'time': dt.trafic.out.time, 
-                'success': dt.trafic.out.success, 
-                'error': dt.trafic.out.error});
-        }
-        setData(preparedData);
-    }else{
-        setData([]);
+    }
+    document.addEventListener(EVENT_NODE_SELECTION, handleChange);
+    return function cleanup(){
+        document.removeEventListener(EVENT_NODE_SELECTION, handleChange);
     }
   });
 

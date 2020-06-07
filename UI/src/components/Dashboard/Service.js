@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { makeStyles } from '@material-ui/styles';
 import Alert from '@material-ui/lab/Alert';
 import {
@@ -29,14 +29,21 @@ const Service = props => {
   
   const [data, setData] = useState([]);
 
-  document.addEventListener(EVENT_NODE_SELECTION, function(event) { 
-    if(event.detail.isSelected){
-        let dt = event.detail.data.raw;
-        setData(dt.services ? dt.services : []);
-    }else{
-        setData([]);
-    }
+  useEffect(() => {
+      function handleChange(event) { 
+        if(event.detail.isSelected){
+            let dt = event.detail.data.raw;
+            setData(dt.services ? dt.services : []);
+        }else{
+            setData([]);
+        }
+      }
+      document.addEventListener(EVENT_NODE_SELECTION, handleChange);
+      return function cleanup(){
+          document.removeEventListener(EVENT_NODE_SELECTION, handleChange);
+      }
   });
+
   let view = (
     <Paper component="ul" className={classes.listRoot}>
         {data.map((row) => (
