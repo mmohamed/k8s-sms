@@ -4,8 +4,8 @@ const USER_API_BASE_URL = process.env.REACT_APP_URL_BASE;
 
 class AuthService {
 
-    getWithAuth(path, options, onSuccess, onError, onAuthRequired, dontRetry){
-        this.withAuth(null, path, null, options, onSuccess, onError, onAuthRequired, dontRetry);
+    getWithAuth(path, data, options, onSuccess, onError, onAuthRequired, dontRetry){
+        this.withAuth(null, path, data, options, onSuccess, onError, onAuthRequired, dontRetry);
     }
 
     withAuth(method, path, data, options, onSuccess, onError, onAuthRequired, dontRetry){
@@ -23,7 +23,8 @@ class AuthService {
         };
         config.url = USER_API_BASE_URL + path;
         config.method = method || 'get';
-        config.data = data;
+        config.data = method === 'post' ? data : null;
+        config.params = method !== 'post' ? data : null;
         axios.request(config).then(res => {
             if(res.status === 200 || res.status === 201){
                 if('function' == typeof onSuccess){

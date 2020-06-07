@@ -47,9 +47,9 @@ const Filter = props => {
   
   useEffect(() => {
     function handleChange(event) { 
-        if(event.detail && event.detail.startAt && event.detail.endAt){
-            setSelectedFromDate(new Date(event.detail.startAt));
-            setSelectedToDate(new Date(event.detail.endAt));
+        if(event.detail && event.detail.from && event.detail.to){
+            setSelectedFromDate(new Date(event.detail.from));
+            setSelectedToDate(new Date(event.detail.to));
         }else{
             setSelectedFromDate(null);
             setSelectedToDate(null);

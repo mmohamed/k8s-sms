@@ -18,12 +18,13 @@ export class ViewEngine {
     ingress;
     model;
     dagre;
+    isLoaded;
     nodes = [];
     links = [];
 
     constructor(){
         this.engine = createEngine();
-
+        this.isLoaded = false;
         //this.engine.getLinkFactories().registerFactory(new ArrowsLinkFactory());
         this.engine.getLinkFactories().registerFactory(new AdvancedLinkFactory());
         this.engine.getNodeFactories().registerFactory(new AppNodeFactory());
@@ -69,14 +70,18 @@ export class ViewEngine {
             });
         }
         // distrube
-        this.__distrube(callback);
+        this.isLoaded = true;
+        this.distrube(callback);
         // events
         document.dispatchEvent( new CustomEvent(EVENT_ENGINE_LOADED, {
             detail: { 
                 time: new Date().getTime(),
                 ingress: json.ingress ? true : false, 
                 nodes: json.nodes ? json.nodes : [], 
-                links: json.links ? json.links : [] 
+                links: json.links ? json.links : [],
+                from: json.from,
+                to: json.to,
+                namespace: json.namespace 
             }
         }));
     }
@@ -238,7 +243,10 @@ export class ViewEngine {
     }
     
 
-    __distrube(callback){
+    distrube(callback){
+        if(!this.isLoaded){
+            return;
+        }
         let model = this.model;
         let engine = this.engine;
         let dagre = this.dagre;
@@ -255,7 +263,7 @@ export class ViewEngine {
                 if('function' === typeof callback){
                     callback()
                 }
-              }, 500);
-          }, 500);
+              }, 100);
+          }, 100);
     }
 }

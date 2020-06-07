@@ -24,7 +24,7 @@ const Scope = props => {
   const [data, setData] = React.useState([])
 
   const handleChange = (origin) => {
-    setNamespace(origin.target.value)
+    setNamespace(origin.target.value);
     document.dispatchEvent(new CustomEvent(EVENT_ENGINE_FILTER, {
         detail: { namespace: origin.target.value}
     }));
