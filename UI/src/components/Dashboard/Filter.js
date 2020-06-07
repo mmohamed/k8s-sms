@@ -47,11 +47,14 @@ const Filter = props => {
   
   useEffect(() => {
     function handleChange(event) { 
-        if(event.detail && event.detail.from && event.detail.to){
+        if(event.detail && event.detail.from){
             setSelectedFromDate(new Date(event.detail.from));
-            setSelectedToDate(new Date(event.detail.to));
         }else{
             setSelectedFromDate(null);
+        }
+        if(event.detail && event.detail.to){
+            setSelectedToDate(new Date(event.detail.to));
+        }else{
             setSelectedToDate(null);
         }
     }
@@ -77,6 +80,7 @@ const Filter = props => {
                     format="dd/MM/yyyy"
                     value={selectedFromDate}
                     maxDate={selectedToDate}
+                    clearable={true}
                     onChange={handleFromDateChange}
                     KeyboardButtonProps={{
                         'aria-label': 'From',
@@ -94,6 +98,7 @@ const Filter = props => {
                     format="dd/MM/yyyy"
                     minDate={selectedFromDate}
                     value={selectedToDate}
+                    clearable={true}
                     onChange={handleToDateChange}
                     KeyboardButtonProps={{
                         'aria-label': 'To',

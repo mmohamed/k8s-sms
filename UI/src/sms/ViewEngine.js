@@ -89,15 +89,15 @@ export class ViewEngine {
     refresh(json, callback){
         let selectedNode = this.model.getSelectedEntities();
         this.model.clearSelection();
-        this.links.forEach((link) => {
-            this.model.removeLink(link);
-        }); 
         this.nodes.forEach((node) => {
             this.model.removeNode(node.node);
         }); 
         if(this.ingress){
             this.model.removeNode(this.ingress);
         }
+        this.links.forEach((link) => {
+            this.model.removeLink(link);
+        }); 
         this.ingress = null;
         this.nodes = [];
         this.links = [];
@@ -241,10 +241,16 @@ export class ViewEngine {
         });
         return target;
     }
-    
 
     distrube(callback){
         if(!this.isLoaded){
+            return;
+        }
+        // prevent distrub error next time pf empty model
+        if(!this.nodes.length){
+            if('function' === typeof callback){
+                callback()
+            }
             return;
         }
         let model = this.model;
@@ -258,7 +264,7 @@ export class ViewEngine {
             setTimeout(function(){
                 dagre.redistribute(model);
                 engine.repaintCanvas();
-                engine.zoomToFitNodes(100);
+                engine.zoomToFit(); // or engine.zoomToFitNodes(100)
                 model.setLocked(true);
                 if('function' === typeof callback){
                     callback()

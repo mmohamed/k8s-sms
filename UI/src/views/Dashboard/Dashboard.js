@@ -30,20 +30,20 @@ class Dashboard extends React.Component{
     });
     // bind filter
     document.addEventListener(EVENT_ENGINE_FILTER, function(event) { 
-      if(event.detail.from){
+      if(event.detail.from !== undefined){
         that.filter.from = event.detail.from;
       }
-      if(event.detail.to){
+      if(event.detail.to !== undefined){
         that.filter.to = event.detail.to;
       }
-      if(event.detail.namespace){
+      if(event.detail.namespace !== undefined){
         that.filter.namespace = event.detail.namespace;
       }
       that.handleGet();
     });
     // prevent hide viewport 
     window.addEventListener('focus', function(event){
-      that.viewEngine.distrube();
+        that.viewEngine.distrube();
     });
   }
 
