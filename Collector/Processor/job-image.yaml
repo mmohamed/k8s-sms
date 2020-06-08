@@ -1,0 +1,33 @@
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: processor
+  namespace: kube-sms
+spec:
+  schedule: "*/5 * * * *"
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: server
+              image: medinvention/k8S-sms-processor
+              env:
+                - name: DB_NAME
+                  value: logs
+                - name: DB_HOST
+                  value: db-service.kube-sms.svc.cluster.local
+                - name: DB_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: dbsecret
+                      key: username
+                - name: DB_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: dbsecret
+                      key: password

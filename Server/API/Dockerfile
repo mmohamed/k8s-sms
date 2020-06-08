@@ -2,7 +2,7 @@ FROM python
 
 RUN pip install flask flask-jwt-extended flask_cors mysql.connector
 
-COPY server.py /var/static/server.py
+COPY api-server.py /var/static/server.py
 
 EXPOSE 5000
 

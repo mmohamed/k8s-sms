@@ -267,6 +267,3 @@ spec:
             - name: static-volume
               configMap:
                 name: server-processor
-          
-# pods=$(kubectl get pods --selector=job-name=processor --output=jsonpath={.items[*].metadata.name})
-# kubectl logs $pods

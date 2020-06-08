@@ -299,4 +299,4 @@ def associate(data, columns):
 
 
 if __name__ == '__main__':
-    api.run()
+    api.run('0.0.0.0')

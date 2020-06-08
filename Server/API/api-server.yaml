@@ -16,22 +16,22 @@ data:
     from mysql.connector import Error
     import mysql.connector
     import os
-
+    
     if not os.environ.get("USERNAME") or not os.environ.get("PASSWORD"):
         raise RuntimeError('Username and password environment variables must be defined for security access')
-
+    
     api = Flask(__name__)
     api.debug = True if os.environ.get("DEBUG") else False
     api.config['JWT_SECRET_KEY'] = os.environ.get("JWT_SECRET") if os.environ.get("JWT_SECRET") else 'static-jwt-secret'
     api.config['CORS_HEADERS'] = 'Content-Type'
     cors = CORS(api)
     jwt = JWTManager(api)
-
+    
     @cross_origin()
     @api.route('/get', methods=['OPTIONS'])
     def authOption():
         return 'OPTIONS'
-
+    
     @cross_origin()
     @api.route('/auth', methods=['POST'])
     def auth():
@@ -45,12 +45,12 @@ data:
             'access_token': create_access_token(identity=username),
             'refresh_token': create_refresh_token(identity=username)
         }), 200
-
+    
     @cross_origin()
     @api.route('/refresh', methods=['OPTIONS'])
     def refreshOption():
         return 'OPTIONS'
-
+    
     @cross_origin()
     @api.route('/refresh', methods=['POST'])
     @jwt_refresh_token_required
@@ -59,7 +59,7 @@ data:
         return json.dumps({
             'access_token': create_access_token(identity=user)
         }), 200
-
+    
     @cross_origin()
     @api.route('/get', methods=['OPTIONS'])
     def getOption():
@@ -72,9 +72,9 @@ data:
         fromDate = request.args.get('from', None)
         toDate = request.args.get('to', None)
         filtredNamespace = request.args.get('namespace', None)
-
+    
         data = {'ingress': False, 'nodes': [], 'links': [], 'from': fromDate, 'to': toDate, 'namespace': filtredNamespace}
-
+    
         db = connect()
         if db == None:
             return json.dumps({"status": False, "message": "Unable to connect to master db"})
@@ -86,7 +86,7 @@ data:
         serviceIds = ['0']
         for row in list:
             node = associate(row, columns)
-
+    
             metadata = getMetadata(node)
             services = getService(node, filtredNamespace)
             trafic = getTrafic(node, services, fromDate, toDate)
@@ -103,10 +103,10 @@ data:
                     'metadata': metadata,
                     'trafic' : trafic,
                     'status': status})
-
+    
         if not len(serviceIds) or not len(data['nodes']):
             return json.dumps(data)
-
+    
         nodeIds = map(lambda d: str(d['id']), data['nodes'])
         cursor.execute("SELECT * FROM link WHERE from_id IN ("+','.join(serviceIds)+ ") AND to_id IN ("+','.join(nodeIds)+ ")")
         list = cursor.fetchall()
@@ -119,10 +119,10 @@ data:
             data['links'].append({
                 'from': str(link['from_node_id'])+'#'+str(link['from_id']) if int(link['from_node_id']) != 0 else 'ingress', 
                 'to': str(link['to_id'])})
-
+    
         db.close()        
         return json.dumps(data)
-
+    
     def getStatus(node, services, fromDate, toDate):
         db = connect()
         cursor = db.cursor()
@@ -141,18 +141,18 @@ data:
             inQuery += " AND created_at < %s "
             inQueryParams += (toDate,)
         cursor.execute(inQuery, inQueryParams)
-
+    
         row = cursor.fetchone()
         columns = cursor.description
         statusIn = associate(row, columns)
-
+    
         serviceIds = []
         for service in services:
             serviceIds.append(str(service['id']))
         
         if not len(serviceIds):
             return {}
-
+    
         outQuery = """SELECT COUNT(*) AS count , 
             SUM(CASE WHEN SUBSTRING(code, 1, 1) = '2' THEN 1 ELSE 0 END) AS 2xx, 
             SUM(CASE WHEN SUBSTRING(code, 1, 1) = '3' THEN 1 ELSE 0 END) AS 3xx,
@@ -167,7 +167,7 @@ data:
         if toDate != None and toDate != '':
             outQuery += " AND created_at < %s "
             outQueryParams += (toDate,)
-
+    
         cursor.execute(outQuery, outQueryParams)
         row = cursor.fetchone()
         columns = cursor.description
@@ -181,11 +181,11 @@ data:
         for column in index:
             outState[column] = round(100 * int(statusOut[column]) / int(statusOut['count'])) if statusOut['count'] and int(statusOut['count']) > 0 else 0
         return {'in' : inState, 'out': outState} 
-
+    
     def getTrafic(node, services, fromDate, toDate):
         db = connect()
         cursor = db.cursor()
-
+    
         inTimeQuery = "SELECT AVG(request_time) FROM request WHERE to_id = %s"
         inTimeQueryParams = (node['id'],)
         if fromDate != None and fromDate != '':
@@ -196,7 +196,7 @@ data:
             inTimeQueryParams += (toDate,)
         cursor.execute(inTimeQuery, inTimeQueryParams)
         inTime = cursor.fetchone()
-
+    
         outTimeQuery = "SELECT AVG(response_time) FROM request WHERE to_id = %s"
         outTimeQueryParams = (node['id'],)
         if fromDate != None and fromDate != '':
@@ -207,7 +207,7 @@ data:
             outTimeQueryParams += (toDate,)
         cursor.execute(outTimeQuery, outTimeQueryParams)
         outTime = cursor.fetchone()
-
+    
         inQuery = """SELECT COUNT(*) AS count , SUM(CASE WHEN SUBSTRING(code, 1, 1) != '5' THEN 1 ELSE 0 END) 
             AS success, SUM(CASE WHEN SUBSTRING(code, 1, 1) = '5' THEN 1 ELSE 0 END) AS error 
             FROM request WHERE to_id = %s
@@ -219,19 +219,19 @@ data:
         if toDate != None and toDate != '':
             inQuery += " AND created_at < %s  "
             inQueryParams += (toDate,)
-
+    
         cursor.execute(inQuery, inQueryParams)
         row = cursor.fetchone()
         columns = cursor.description
         stateIn = associate(row, columns)
-
+    
         serviceIds = []
         for service in services:
             serviceIds.append(str(service['id']))
-
+    
         if not len(serviceIds):
             return { } 
-
+    
         outQuery = """SELECT COUNT(*) AS count , SUM(CASE WHEN SUBSTRING(code, 1, 1) != '5' THEN 1 ELSE 0 END) 
             AS success, SUM(CASE WHEN SUBSTRING(code, 1, 1) = '5' THEN 1 ELSE 0 END) AS error 
             FROM request WHERE from_id IN (""" + ','.join(serviceIds) +""")
@@ -258,7 +258,7 @@ data:
                 'success': round(100 * int(stateOut['success']) / int(stateOut['count'])) if int(stateOut['count']) > 0 else 0, 
                 'error': round(100 * int(stateOut['error']) / int(stateOut['count'])) if int(stateOut['count']) > 0 else 0}
         } 
-
+    
     def getService(node, filtredNamespace):
         db = connect()
         services = []
@@ -281,14 +281,14 @@ data:
                 'namespace': service['namespace']
             })
         return services
-
+    
     def getMetadata(node):
         return [
             {'name': 'Group ID', 'value' : '#'+str(node['id'])},
             {'name': 'Group name', 'value' : node['name']},
             {'name': 'Creation date', 'value' : node['created_at']}
         ]
-
+    
     def connect():
         try:
             conn = mysql.connector.connect(host=os.environ["DB_HOST"], database=os.environ["DB_NAME"], user=os.environ["DB_USER"],password=os.environ["DB_PASSWORD"])
@@ -297,16 +297,16 @@ data:
             return None
         except Error as e:
             return None
-
+    
     def associate(data, columns):
         row = {}
         for (index,column) in enumerate(data):
             row[columns[index][0]] = column
         return row
-
-
+    
+    
     if __name__ == '__main__':
-        api.run()
+        api.run('0.0.0.0')
 ---
 
 apiVersion: apps/v1
@@ -327,7 +327,7 @@ spec:
       containers:
       - name: server
         image: python
-        command: ['sh', '-c', 'pip install flask Flask-JWT flask_cors mysql.connector && python /var/static/server']
+        command: ['sh', '-c', 'pip install flask flask-jwt-extended flask_cors mysql.connector && python /var/static/server']
         ports:
           - containerPort: 5000
         volumeMounts:
@@ -335,9 +335,9 @@ spec:
             mountPath: /var/static
         env:
           - name: USERNAME
-            value: {{admin-username}}
+            value: mmo@medinvention.dev
           - name: PASSWORD
-            value: {{admin-password}}
+            value: mmo
           - name: DB_NAME
             value: logs
           - name: DB_HOST
@@ -370,7 +370,7 @@ spec:
     targetPort: 5000
   selector:
     run: api
-
+    
 ---
 apiVersion: extensions/v1beta1
 kind: Ingress
@@ -383,7 +383,7 @@ metadata:
     run: api
 spec:
   rules:
-    - host: {{host}}
+    - host: api-sms.medinvention.dev
       http:
         paths:
           - backend:
@@ -392,5 +392,5 @@ spec:
             path: /
   tls:
     - hosts:
-      - {{host}}
+      - api-sms.medinvention.dev
       secretName: sms-tls
