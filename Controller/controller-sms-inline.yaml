@@ -355,7 +355,7 @@ spec:
       serviceAccountName: controller-access
       containers:
       - name: controller
-        image: python
+        image: python:3
         command: ['sh', '-c', 'pip install kubernetes && python /var/static/controller.py']
         volumeMounts:
           - name: static-volume

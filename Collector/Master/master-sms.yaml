@@ -70,7 +70,7 @@ spec:
     spec:
       containers:
       - name: server
-        image: python
+        image: python:3
         command: ['sh', '-c', 'pip install flask mysql-connector-python && python /var/static/server']
         env:
           - name: DB_NAME

@@ -36,7 +36,7 @@ spec:
     spec:
       containers:
       - name: server
-        image: python
+        image: python:3
         command: ['sh', '-c', 'pip install flask && python /var/static/server']
         ports:
           - containerPort: 5000

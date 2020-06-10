@@ -17,7 +17,7 @@ spec:
       serviceAccountName: controller-access
       containers:
       - name: controller
-        image: medinvention/sms-controller
+        image: medinvention/k8s-sms-controller
 
 ---
 apiVersion: v1

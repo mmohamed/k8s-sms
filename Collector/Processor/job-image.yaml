@@ -15,7 +15,7 @@ spec:
           restartPolicy: Never
           containers:
             - name: server
-              image: medinvention/k8S-sms-processor
+              image: medinvention/k8s-sms-processor
               env:
                 - name: DB_NAME
                   value: logs
