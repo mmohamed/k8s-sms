@@ -1,6 +1,7 @@
-FROM python
+FROM python:3
 
-RUN pip install flask flask-jwt-extended flask_cors mysql.connector
+RUN mkdir /var/static
+RUN pip install Flask flask-jwt-extended flask_cors mysql.connector
 
 COPY api-server.py /var/static/server.py
 

@@ -1,7 +1,10 @@
-FROM python
+FROM python:3
 
-RUN pip install mysql.connector
+RUN mkdir /var/static
+RUN pip install Flask mysql.connector
 
 COPY master.py /var/static/server.py
+
+EXPOSE 5000
 
 CMD python /var/static/server.py

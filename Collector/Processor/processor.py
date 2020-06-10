@@ -12,7 +12,7 @@ log = None
 def connect():
         global connection
         if connection != None and connection.is_connected():
-        return connection
+            return connection
         connection = None
         try:
             connection = mysql.connector.connect(
@@ -24,9 +24,9 @@ def connect():
                 connection.autocommit = False
                 return connection
             return None
-        except Error as e:
-        logger().error("Unable to connect to database : {}".format(e))
-        return None
+        except RuntimeError as e:
+            logger().error("Unable to connect to database : {}".format(e))
+            return None
 
 def run():
     tic = time.time()
