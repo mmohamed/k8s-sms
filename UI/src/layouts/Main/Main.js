@@ -9,13 +9,14 @@ import Actionbar from './components/Actionbar/Actionbar';
 import AuthService from '../../services/AuthService';
 import { Redirect } from 'react-router-dom';
 import Notification from '../../components/Common/Notification';
+import Headbar from './components/Actionbar/Headbar';
 
 const useStyles = makeStyles(theme => ({
   root: {
     paddingTop: 56,
     height: '100%',
     [theme.breakpoints.up('sm')]: {
-      paddingTop: 64
+      paddingTop: 64 + 50
     }
   },
   shiftContent: {
@@ -69,6 +70,7 @@ const Main = props => {
       })}
     >
       <Topbar onSidebarOpen={handleBarOpen} />
+      <Headbar open={shouldOpenAction} variant={'persistent'}/>
       <Sidebar onClose={handleSidebarClose} open={openSidebar} variant={'temporary'}/>
       <main className={classes.content}>
         {children}

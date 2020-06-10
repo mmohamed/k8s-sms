@@ -104,6 +104,10 @@ data:
                 return None
         else:
             logger().info("Invalid request {}".format(request))
+            cursor = connection.cursor()
+            cursor.execute("INSERT INTO error (host, ident, message) VALUES (%s, 'processor', %s)", (request['host'], request['message']))
+            cursor.execute("DELETE FROM access WHERE id = %s", (request['id'], ))
+            connection.commit()
             return False
 
     def createLink(fromNodeID, fromID, toID):
@@ -239,7 +243,7 @@ spec:
           restartPolicy: Never
           containers:
             - name: server
-              image: python
+              image: python:3
               command: ['sh', '-c', 'pip install mysql.connector && python /var/static/server']
               env:
                 - name: DB_NAME
@@ -263,6 +267,3 @@ spec:
             - name: static-volume
               configMap:
                 name: server-processor
-          
-# pods=$(kubectl get pods --selector=job-name=processor --output=jsonpath={.items[*].metadata.name})
-# kubectl logs $pods

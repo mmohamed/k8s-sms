@@ -10,7 +10,7 @@ metadata:
     run: ui
 spec:
   rules:
-    - host: {{host}}
+    - host: sms.medinvention.dev
       http:
         paths:
           - backend:
@@ -19,7 +19,7 @@ spec:
             path: /
   tls:
     - hosts:
-      - {{host}}
+      - sms.medinvention.dev
       secretName: sms-tls
 
 ---
@@ -41,7 +41,7 @@ spec:
         run: ui
     spec:
       containers:
-      - name: front
+      - name: ui-server
         image: medinvention/k8s-sms-ui
         imagePullPolicy: Always
         ports:

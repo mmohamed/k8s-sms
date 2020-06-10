@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-server
+  namespace: kube-sms
+spec:
+  selector:
+    matchLabels:
+      run: api
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        run: api
+    spec:
+      containers:
+      - name: server
+        image: medinvention/k8S-sms-api
+        ports:
+          - containerPort: 5000
+        env:
+          - name: USERNAME
+            value: {{username}}
+          - name: PASSWORD
+            value: {{password}}
+          - name: DB_NAME
+            value: logs
+          - name: DB_HOST
+            value: db-service.kube-sms.svc.cluster.local
+          - name: DB_USER
+            valueFrom:
+              secretKeyRef:
+                name: dbsecret
+                key: username
+          - name: DB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: dbsecret
+                key: password
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-server-service
+  namespace: kube-sms
+spec:
+  ports:
+  - name: http
+    port: 80
+    targetPort: 5000
+  selector:
+    run: api
+    
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: nginx
+  name: api-server-ingress
+  namespace: kube-sms
+  labels:
+    run: api
+spec:
+  rules:
+    - host: {{host}}
+      http:
+        paths:
+          - backend:
+              serviceName: api-server-service
+              servicePort: http
+            path: /
+  tls:
+    - hosts:
+      - {{host}}
+      secretName: sms-tls

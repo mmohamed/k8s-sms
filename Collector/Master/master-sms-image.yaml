@@ -1,0 +1,50 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: master
+  namespace: kube-sms
+spec:
+  selector:
+    matchLabels:
+      run: master
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        run: master
+    spec:
+      containers:
+      - name: server
+        image: medinvention/k8s-sms-master
+        env:
+          - name: DB_NAME
+            value: logs
+          - name: DB_HOST
+            value: db-service.kube-sms.svc.cluster.local
+          - name: DB_USER
+            valueFrom:
+              secretKeyRef:
+                name: dbsecret
+                key: username
+          - name: DB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: dbsecret
+                key: password
+        ports:
+          - containerPort: 5000
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: master-service
+  namespace: kube-sms
+spec:
+  ports:
+  - name: http
+    port: 80
+    targetPort: 5000
+  selector:
+    run: master

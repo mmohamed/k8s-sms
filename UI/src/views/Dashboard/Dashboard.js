@@ -1,7 +1,7 @@
 import React from 'react';
 import { CanvasWidget} from '@projectstorm/react-canvas-core';
 import BaseWidget from './../../BaseWidget'
-import { ViewEngine } from './../../sms/ViewEngine';
+import { ViewEngine, EVENT_ENGINE_RELOAD, EVENT_ENGINE_FILTER } from './../../sms/ViewEngine';
 import Loader from '../../components/Common/Loader';
 import SMSService from '../../services/SMSService';
 import Notification from '../../components/Common/Notification';
@@ -9,6 +9,7 @@ import Notification from '../../components/Common/Notification';
 class Dashboard extends React.Component{
   
   viewEngine;
+  filter;
 
   constructor(props){
     super(props);
@@ -17,12 +18,40 @@ class Dashboard extends React.Component{
     this.handleErrorMessage = this.handleErrorMessage.bind(this);
     this.handleSuccessMessage = this.handleSuccessMessage.bind(this);
     this.handleOpenLoader = this.handleOpenLoader.bind(this);
+    this.filter = {from: null, to: null, namespace: null};
   }
  
   componentDidMount(){
     let that = this;
-    SMSService.get(function(data){
-      that.viewEngine.load(data, () => {
+    this.handleGet();
+    // bind reload
+    document.addEventListener(EVENT_ENGINE_RELOAD, function(event) { 
+      that.handleGet();
+    });
+    // bind filter
+    document.addEventListener(EVENT_ENGINE_FILTER, function(event) { 
+      if(event.detail.from !== undefined){
+        that.filter.from = event.detail.from;
+      }
+      if(event.detail.to !== undefined){
+        that.filter.to = event.detail.to;
+      }
+      if(event.detail.namespace !== undefined){
+        that.filter.namespace = event.detail.namespace;
+      }
+      that.handleGet();
+    });
+    // prevent hide viewport 
+    window.addEventListener('focus', function(event){
+        that.viewEngine.distrube();
+    });
+  }
+
+  handleGet(){
+    this.setState({loading: true});
+    let that = this;
+    SMSService.get(this.filter, function(data){
+      that.viewEngine.refresh(data, () => {
         that.setState({loading: false});
       });
     }, function(message){

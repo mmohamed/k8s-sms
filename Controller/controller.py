@@ -1,5 +1,4 @@
 from kubernetes import client, config, watch
-
 from kubernetes.client.rest import ApiException
 
 import logging
@@ -18,8 +17,8 @@ out_hdlr.setLevel(logging.INFO)
 log.addHandler(out_hdlr)
 log.setLevel(logging.INFO)
 
-# Configs can be set in Configuration class directly or using helper utility
-config.load_kube_config()
+config.load_incluster_config()
+# config.load_kube_config()
 
 api_instance = client.AppsV1Api(client.ApiClient())
 w = watch.Watch()
@@ -29,8 +28,12 @@ api_core = client.CoreV1Api()
 smsGroups = {}
 
 def loop():
-  for event in w.stream(api_instance.list_deployment_for_all_namespaces, _request_timeout=0):
-    process(event['type'], event['object'])
+  log.info("Controller started...")
+  try:
+    for event in w.stream(api_instance.list_deployment_for_all_namespaces, _request_timeout=0):
+      process(event['type'], event['object'])
+  except KeyboardInterrupt as e:
+    log.info("Controller shutdown.")
 
 
 
@@ -42,9 +45,9 @@ def process(event, deployment):
     if annotations.GROUP in anno:
       
       group = anno[annotations.GROUP]
-      default = bool(anno[annotations.DEFAULT]) if annotations.DEFAULT in anno else False
       port = anno[annotations.PORT] if annotations.PORT in anno else 80
       service = anno[annotations.SERVICE] if annotations.SERVICE in anno else False
+      serviceNamespace = anno[annotations.SERVICENAMESPACE] if annotations.SERVICENAMESPACE in anno else deployment.metadata.namespace
       revision = anno[annotations.REVISION] if annotations.REVISION in anno else 0
       meta = anno[annotations.METADATA] if annotations.METADATA in anno else ""
       
@@ -52,69 +55,95 @@ def process(event, deployment):
         smsGroups[group] = []
 
       deploymentKey = deployment.metadata.namespace + '-' + deployment.metadata.name
+      isPatching = False
 
       if event != "REMOVED":        
-        addToGroup(group=group, deploymentKey=deploymentKey, service=service, default=default)
+        addToGroup(group=group, deploymentKey=deploymentKey, service=service)
 
-        if meta == metadata(group=group, port=port, service=service, revision=int(revision), default=default):
+        if str(meta) == metadata(group=group, port=port, service=service, serviceNamespace=serviceNamespace, revision=int(revision)):
           log.info("Deployment {} already processed".format(deploymentKey))
         else:  
-          injectSidecar(deployment=deployment, group=group, port=port, service=service, revision=revision, default=default)
+          isPatching = True
+          injectSidecar(deployment=deployment, group=group, port=port, service=service, serviceNamespace=serviceNamespace, revision=revision)
           log.info("Creating process for deployment : {} finished".format(deploymentKey))
 
       if event != "REMOVED" and service != False:
-        upService(service=service, namespace=deployment.metadata.namespace, port=port, deployment=deployment.metadata.name)
+        upService(service=service, namespace=serviceNamespace, port=port, deployment=deployment, isPatching=isPatching)
 
       if event == "REMOVED":
         removeFromGroup(group,deploymentKey)
+      
+      if event == "REMOVED" and service != False:
+        reverseService(service=service, namespace=serviceNamespace, port=port)
+      
           
-
-def addToGroup(group, deploymentKey, service, default = False):
+""" 
+Add deployment to service group
+"""
+def addToGroup(group, deploymentKey, service):
   founded = False
   for deployment in smsGroups[group]:
     if deployment['key'] == deploymentKey:
-      deployment['default'] = default
       founded = True
       break
   if not founded:
-    smsGroups[group].append({"key": deploymentKey, "service": service, "default": default})
+    smsGroups[group].append({"key": deploymentKey, "service": service})
 
-
-
+""" 
+Remove deployment to service group
+"""
 def removeFromGroup(group, deploymentKey):
   for deployment in smsGroups[group]:
     if deployment['key'] == deploymentKey:
       smsGroups[group].remove(deployment)
       break
 
-
-
-def injectSidecar(deployment, group, port, service, revision = 0, default = False):
+""" 
+Inject sidecar container base on nginx proxy configuration 
+"""
+def injectSidecar(deployment, group, port, service, serviceNamespace, revision = 0):
   log.info("Injecting sidecar process for deployment : {}-{}, group : {}, port : {}, service : {}".format(deployment.metadata.namespace, deployment.metadata.name, group, port, service))
   # Create/Patch config map
   proxyConfigFilename = "proxy-" + deployment.metadata.name
-  
-  configMapStatus = setProxyConfigMap(name=deployment.metadata.name, namespace=deployment.metadata.namespace, filename=proxyConfigFilename, port=port)
+  proxyPort = getSideCarPort(deployment)
+  configMapStatus = setProxyConfigMap(name=deployment.metadata.name, namespace=deployment.metadata.namespace, filename=proxyConfigFilename, port=port, proxyPort=proxyPort)
   
   if configMapStatus ==  False:
     log.error("Unable to make Proxy Config Map")
 
   container = client.V1Container(
         name="sidecar",
-        image="nginx",
-        ports=[client.V1ContainerPort(container_port=80)],
-        volume_mounts=[client.V1VolumeMount(name="sms-volume", sub_path=proxyConfigFilename, mount_path="/etc/nginx/conf.d/default.conf")]) # add volume mount
+        image="medinvention/nginx:1.17.10",
+        ports=[client.V1ContainerPort(container_port=proxyPort)],
+        env=[
+          client.V1EnvVar(name="POD_NAME", value_from=client.V1EnvVarSource(field_ref=client.V1ObjectFieldSelector(field_path="metadata.name"))),
+          client.V1EnvVar(name="POD_NAMESPACE", value_from=client.V1EnvVarSource(field_ref=client.V1ObjectFieldSelector(field_path="metadata.namespace"))),
+          client.V1EnvVar(name="POD_IP", value_from=client.V1EnvVarSource(field_ref=client.V1ObjectFieldSelector(field_path="status.podIP"))),
+          client.V1EnvVar(name="NODE_GROUP", value=group),
+          client.V1EnvVar(name="NODE_SERVICE", value=service if service != False else deployment.metadata.name),
+          client.V1EnvVar(name="NODE_SERVICE_PORT", value=port)
+        ],
+        lifecycle=client.V1Lifecycle(
+          post_start=client.V1Handler(_exec=client.V1ExecAction(command=["/bin/sh","/var/register"])), 
+          pre_stop=client.V1Handler(_exec=client.V1ExecAction(command=["/bin/sh","/var/unregister"]))),
+        volume_mounts=[
+          client.V1VolumeMount(name="sms-volume", sub_path=proxyConfigFilename, mount_path="/etc/nginx/conf.d/default.conf"),
+          client.V1VolumeMount(name="sms-volume", sub_path="register", mount_path="/var/register"),
+          client.V1VolumeMount(name="sms-volume", sub_path="unregister", mount_path="/var/unregister")])
   
   template = client.V1PodTemplateSpec(
-        spec=client.V1PodSpec(containers=[container], volumes=[client.V1Volume(name="sms-volume", config_map=client.V1ConfigMapVolumeSource(name="sms-files"))])) 
+        spec=client.V1PodSpec(
+          containers=[container], 
+          volumes=[client.V1Volume(name="sms-volume", config_map=client.V1ConfigMapVolumeSource(name="sms-files"))]
+          )
+        ) 
   
   spec = client.V1DeploymentSpec(template=template, selector=deployment.spec.selector)
-  
+
   patch = client.V1Deployment(metadata=client.V1ObjectMeta(annotations={
-    annotations.METADATA : metadata(group=group, port=port, service=service, revision=int(revision)+1, default=default), 
+    annotations.METADATA : metadata(group=group, port=port, service=service, serviceNamespace=serviceNamespace, revision=int(revision)+1), 
     annotations.REVISION : str(int(revision)+1)}),spec=spec
   )
-  
   try:
     response = api_instance.patch_namespaced_deployment(deployment.metadata.name, deployment.metadata.namespace, patch)
     log.info("Patch deployment to add Sidecar for {}".format(deployment.metadata.name))
@@ -123,8 +152,10 @@ def injectSidecar(deployment, group, port, service, revision = 0, default = Fals
     log.error("Exception when patching deployment: {}".format(e))
     return False
 
-
-def upService(service, namespace, port, deployment):
+"""
+Update service to change target port 
+"""
+def upService(service, namespace, port, deployment, isPatching):
   serviceList = []
   try:
     serviceList = api_core.list_namespaced_service(namespace, field_selector="metadata.name="+service).items
@@ -137,15 +168,24 @@ def upService(service, namespace, port, deployment):
   
   serviceData = serviceList[0]
   up = False
+
+  targetPort = str(port)
+  if isPatching and annotations.PROXYPORT in serviceData.metadata.annotations:
+    # if is patching mode, use old proxy port to update service
+    targetPort = str(serviceData.metadata.annotations[annotations.PROXYPORT])        
+
+  proxyPort = getSideCarPort(deployment)
   for portDef in serviceData.spec.ports:
-    if str(portDef.target_port) == str(port):
-      portDef.target_port = 80
+    if str(portDef.target_port) == targetPort:
+      portDef.target_port = proxyPort
       up = True
 
   if not up:
     return False
 
-  serviceData.metadata.annotations[annotations.DEPLOYMENT] = deployment
+  serviceData.metadata.annotations[annotations.DEPLOYMENT] = deployment.metadata.name
+  serviceData.metadata.annotations[annotations.PORT] = str(port)
+  serviceData.metadata.annotations[annotations.PROXYPORT] = str(proxyPort)
 
   try:
     api_core.patch_namespaced_service(name=service, body=serviceData, namespace=namespace)
@@ -155,17 +195,72 @@ def upService(service, namespace, port, deployment):
     return False
   return True
 
+"""
+Reverse service to restore target port 
+"""
+def reverseService(service, namespace, port):
+  serviceList = []
+  try:
+    serviceList = api_core.list_namespaced_service(namespace, field_selector="metadata.name="+service).items
+  except ApiException as e:
+    log.error("Exception when getting list of Service: {}".format(e))
 
+  if len(serviceList) !=  1:
+    log.error("Target service {} not found in namespace {}".format(service, namespace))
+    return False
+  
+  serviceData = serviceList[0]
+  up = False
 
-def metadata(group, port, service, revision, default):
-  metadata = json.dumps({"group": group, "port": port, "service": service, "revision": revision, "default": default})
-  return base64.b64encode(metadata.encode("utf-8"))
+  if not annotations.DEPLOYMENT in serviceData.metadata.annotations or not annotations.PORT in serviceData.metadata.annotations:
+    return False
+  
+  proxyPort = serviceData.metadata.annotations[annotations.PROXYPORT]
 
+  for portDef in serviceData.spec.ports:
+    if str(portDef.target_port) == str(proxyPort):
+      portDef.target_port = str(port)
+      up = True
 
+  if not up:
+    return False
 
+  del serviceData.metadata.annotations[annotations.DEPLOYMENT]
+  del serviceData.metadata.annotations[annotations.PORT]
+  del serviceData.metadata.annotations[annotations.PROXYPORT]
 
+  try:
+    api_core.patch_namespaced_service(name=service, body=serviceData, namespace=namespace)
+    log.info("Patch Service {}".format(service))
+  except ApiException as e:
+    log.error("Exception when Patching service: {}".format(e))
+    return False
+  return True
 
-def setProxyConfigMap(name, namespace, filename, port):
+""" 
+Generate metadata for deployment 
+"""
+def metadata(group, port, service, serviceNamespace, revision):
+  metadata = json.dumps({"group": group, "port": port, "service": service, "serviceNamespace": serviceNamespace, "revision": revision})
+  return str(base64.b64encode(metadata.encode("utf-8")))
+
+"""
+Get Sidecar port
+"""
+def getSideCarPort(deployment):
+  proxyPort = 9000
+  containerPorts = [container.ports for container in deployment.spec.template.spec.containers]
+  usedPorts = []
+  for containerPort in containerPorts:
+    usedPorts = [int(port.container_port) for port in containerPort]
+  while proxyPort in usedPorts:
+    proxyPort += 1 
+  return proxyPort
+
+""" 
+Create or get a config map defining proxy config file 
+"""
+def setProxyConfigMap(name, namespace, filename, port, proxyPort):
   proxyConfigMapName = "sms-files"
   configMaps = []
   try:
@@ -182,32 +277,33 @@ def setProxyConfigMap(name, namespace, filename, port):
         },
         "data": {
             filename: """
-            log_format info '$remote_addr - $remote_user [$time_local] '
-                        '"$request" $status $body_bytes_sent '
-                        '"$http_referer" "$http_user_agent" - '
-                        'rt=$request_time uct=$upstream_connect_time uht=$upstream_header_time urt=$upstream_response_time';
-            server {
-              listen 80;
-              location / {
-                  proxy_set_header HOST $host;
-                  proxy_set_header X-Forwarded-Proto $scheme;
-                  proxy_set_header X-Real-IP $remote_addr;
-                  proxy_pass http://localhost:"""+str(port)+""";
+              log_format info '$remote_addr - $remote_user [$time_local] '
+                          '"$request" $status $body_bytes_sent '
+                          '"$http_referer" "$http_user_agent" - '
+                          'rt=$request_time uct=$upstream_connect_time uht=$upstream_header_time urt=$upstream_response_time';
+              server {
+                listen """+str(proxyPort)+""";
+                location / {
+                    proxy_set_header HOST $host;
+                    proxy_set_header X-Forwarded-Proto $scheme;
+                    proxy_set_header X-Real-IP $remote_addr;
+                    proxy_pass http://localhost:"""+str(port)+""";
+                }
+                error_log  syslog:server=fluentd-service.kube-sms.svc.cluster.local:5140,facility=local6,tag=system,severity=debug info;
+                access_log syslog:server=fluentd-service.kube-sms.svc.cluster.local:5140,facility=local7,tag=system,severity=info info;
               }
-              error_log  syslog:server=fluentd-service.kube-sms.svc.cluster.local:5140,facility=local6,tag=system,severity=debug info;
-              access_log syslog:server=fluentd-service.kube-sms.svc.cluster.local:5140,facility=local7,tag=system,severity=info info;
-            }""",
-            register: """
-            data="{'host': '$HOSTNAME', 'name': '$POD_NAME', 'namespace': '$POD_NAMESPACE', 'ip': '$POD_IP', 'endpoint': '$APP_SERVICE_SERVICE_HOST'}"
-            data=$(echo $data | sed "s/'/\"/g")
-            curl -S -X POST http://master-service.kube-sms.svc.cluster.local/register -H "Content-Type: application/json" -d "$data"
+            """,
+            "register": """
+              data="{'group': '$NODE_GROUP', 'service': '$NODE_SERVICE', 'port': '$NODE_SERVICE_PORT', 'host': '$HOSTNAME', 'name': '$POD_NAME', 'namespace': '$POD_NAMESPACE', 'ip': '$POD_IP'}"
+              data=$(echo $data | sed "s/'/\\"/g")
+              curl -S -X POST http://master-service.kube-sms.svc.cluster.local/register -H "Content-Type: application/json" -d "$data"
+            """, 
+            "unregister": """
+              data="{'group': '$NODE_GROUP', 'service': '$NODE_SERVICE', 'port': '$NODE_SERVICE_PORT', 'host': '$HOSTNAME', 'name': '$POD_NAME', 'namespace': '$POD_NAMESPACE', 'ip': '$POD_IP'}"
+              data=$(echo $data | sed "s/'/\\"/g")
+              curl -S -X POST http://master-service.kube-sms.svc.cluster.local/unregister -H "Content-Type: application/json" -d "$data"
             """
-            unregister: """
-            data="{'host': '$HOSTNAME', 'name': '$POD_NAME', 'namespace': '$POD_NAMESPACE', 'ip': '$POD_IP', 'endpoint': '$APP_SERVICE_SERVICE_HOST'}"
-            data=$(echo $data | sed "s/'/\"/g")
-            curl -S -X POST http://master-service.kube-sms.svc.cluster.local/unregister -H "Content-Type: application/json" -d "$data"
-            """
-        }
+            }
     }
   try:
     if len(configMaps) ==  1:
@@ -220,11 +316,6 @@ def setProxyConfigMap(name, namespace, filename, port):
     log.error("Exception when making Proxy Config Map: {}".format(e))
     return False
   return True
-
-
-
-
-
 
 # main
 loop()

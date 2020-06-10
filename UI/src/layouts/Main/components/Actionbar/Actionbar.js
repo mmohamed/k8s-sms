@@ -8,7 +8,6 @@ import HTTPTrafic from '../../../../components/Dashboard/HTTPTrafic';
 import HTTPStatus from '../../../../components/Dashboard/HTTPStatus';
 import Service from '../../../../components/Dashboard/Service';
 
-
 const useStyles = makeStyles(theme => ({
   drawer: {
     width: 350,

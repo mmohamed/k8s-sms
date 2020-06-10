@@ -2,8 +2,8 @@ import AuthService from './AuthService'
 
 class SMSService {
 
-    get(onSuccess, onError, onAuthRequired){
-        AuthService.getWithAuth('get', null, onSuccess, onError, onAuthRequired);
+    get(data, onSuccess, onError, onAuthRequired){
+        AuthService.getWithAuth('get', data, null, onSuccess, onError, onAuthRequired);
     }
 }
 

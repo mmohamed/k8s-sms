@@ -1,0 +1,63 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: review-v1-server
+  namespace: sample-sms
+data:
+  server: |
+    from flask import Flask, json
+    api = Flask(__name__)
+    @api.route('/', methods=['GET'])
+    def get():
+      reviews = {"ratings": [], "reviews": [{"id": 1, "name": "Review One"}, {"id": 2, "name": "Review Two"}]}
+      return json.dumps(reviews)
+    if __name__ == '__main__':
+      api.run()
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deployment-review-v1
+  namespace: sample-sms
+  annotations:
+    medinvention.dev/sms.group: review
+    medinvention.dev/sms.port: "5000"
+    medinvention.dev/sms.service: review-v1-service
+spec:
+  selector:
+    matchLabels:
+      app: review-v1
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: review-v1
+    spec:
+      containers:
+      - name: server
+        image: python:3
+        command: ['sh', '-c', 'pip install flask && python /var/static/server']
+        ports:
+          - containerPort: 5000
+        volumeMounts:
+          - name: review-v1-server
+            mountPath: /var/static
+      volumes:
+        - name: review-v1-server
+          configMap:
+            name: review-v1-server
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: review-v1-service
+  namespace: sample-sms
+spec:
+  ports:
+  - name: http
+    port: 5000
+    targetPort: 5000
+  selector:
+    app: review-v1
