@@ -1,0 +1,3 @@
+[submodule "Helm"]
+	path = Helm
+	url = https://github.com/mmohamed/k8s-sms-helm.git
