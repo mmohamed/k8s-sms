@@ -232,6 +232,8 @@ kind: CronJob
 metadata:
   name: processor
   namespace: kube-sms
+  labels:
+    run: processor
 spec:
   schedule: "*/5 * * * *"
   successfulJobsHistoryLimit: 1
@@ -239,6 +241,9 @@ spec:
   jobTemplate:
     spec:
       template:
+        metadata:
+            labels:
+                run: processor
         spec:
           restartPolicy: Never
           containers:

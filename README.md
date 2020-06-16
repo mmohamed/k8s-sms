@@ -1,6 +1,6 @@
 # Simple Mesh Service for Kubernetes
 
-This is a very simplified mesh veervice injector and monitoring for Rest deployment inside a K8S cluster.
+This is a very simplified mesh service injector and monitoring for Rest deployment inside a K8S cluster.
 
 ##### [@See for full description](https://blog.medinvention.dev)
 

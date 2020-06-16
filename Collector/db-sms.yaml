@@ -87,7 +87,7 @@ spec:
   ports:
   - port: 3306
   selector:
-    app: db
+    run: db
 
 ---
 apiVersion: v1
@@ -111,11 +111,11 @@ metadata:
 spec:
   selector:
     matchLabels:
-      app: db
+      run: db
   template:
     metadata:
       labels:
-        app: db
+        run: db
     spec:
       containers:
         - image: medinvention/mysql:arm

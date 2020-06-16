@@ -38,12 +38,12 @@ metadata:
 spec:
   selector:
     matchLabels:
-      app: fluentd
+      run: logger
   replicas: 1
   template:
     metadata:
       labels:
-        app: fluentd
+        run: logger
     spec:
       containers:
       - name: fluentd
@@ -83,4 +83,4 @@ spec:
     targetPort: 5140
     protocol: TCP
   selector:
-    app: fluentd
+    run: logger
