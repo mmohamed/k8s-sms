@@ -41,11 +41,14 @@ spec:
         run: ui
     spec:
       containers:
-      - name: ui-server
-        image: medinvention/k8s-sms-ui
-        imagePullPolicy: Always
-        ports:
-        - containerPort: 80
+        - name: ui-server
+          image: medinvention/k8s-sms-ui
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          env:
+            - name: BACKEND_URL
+              value: "https://api-sms.medinvention.dev/"
 
 ---
 apiVersion: v1

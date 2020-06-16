@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const USER_API_BASE_URL = process.env.REACT_APP_URL_BASE;
+const USER_API_BASE_URL = window._env && window._env.REACT_APP_URL_BASE ? window._env.REACT_APP_URL_BASE : process.env.REACT_APP_URL_BASE;
 
 class AuthService {
 
