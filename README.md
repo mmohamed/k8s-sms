@@ -6,7 +6,7 @@ This is a very simplified mesh service injector and monitoring for Rest deployme
 
 ----
 
-<img src="UI/public/images/network-cover-blue.jpg" width="900">
+<img src="https://raw.githubusercontent.com/mmohamed/k8s-sms/master/UI/public/images/network-cover-blue.jpg" width="900">
 
 ---- 
 

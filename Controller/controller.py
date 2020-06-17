@@ -5,6 +5,7 @@ import logging
 import sys
 import json
 import base64
+import os
 
 import annotations
 
@@ -18,7 +19,7 @@ log.addHandler(out_hdlr)
 log.setLevel(logging.INFO)
 
 config.load_incluster_config()
-# config.load_kube_config()
+#config.load_kube_config()
 
 api_instance = client.AppsV1Api(client.ApiClient())
 w = watch.Watch()
@@ -111,9 +112,11 @@ def injectSidecar(deployment, group, port, service, serviceNamespace, revision =
   if configMapStatus ==  False:
     log.error("Unable to make Proxy Config Map")
 
+  release = os.environ.get("RELEASE") if os.environ.get("RELEASE") else "latest"
+
   container = client.V1Container(
         name="sidecar",
-        image="medinvention/nginx:1.17.10",
+        image="medinvention/k8s-sms-sidecar:"+release,
         ports=[client.V1ContainerPort(container_port=proxyPort)],
         env=[
           client.V1EnvVar(name="POD_NAME", value_from=client.V1EnvVarSource(field_ref=client.V1ObjectFieldSelector(field_path="metadata.name"))),
