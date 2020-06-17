@@ -118,7 +118,7 @@ spec:
         run: db
     spec:
       containers:
-        - image: medinvention/mysql:arm
+        - image: medinvention/mysql:5.6
           name: mysql
           resources:
             requests:

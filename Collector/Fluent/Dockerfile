@@ -1,4 +1,4 @@
-FROM fluent/fluentd:edge-debian-armhf
+FROM fluent/fluentd:v1.11-armhf-debian
 
 USER 0
 

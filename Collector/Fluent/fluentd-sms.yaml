@@ -46,8 +46,8 @@ spec:
         run: logger
     spec:
       containers:
-      - name: fluentd
-        image: medinvention/fluentd-armhf #fluent/fluentd:edge-debian-armhf
+      - name: logger
+        image: medinvention/k8s-sms-logger
         imagePullPolicy: Always
         command: ['fluentd', '-c', '/fluentd/etc/smsfluentd.conf', '-v']
         ports:
