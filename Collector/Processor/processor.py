@@ -94,6 +94,10 @@ def processRequest(request):
         except Exception as e:
             connection.rollback()
             logger().error("Error when request {} processing {}".format(request, e))
+            cursor = connection.cursor()
+            cursor.execute("INSERT INTO error (host, ident, message) VALUES (%s, 'processor', %s)", (request['host'], request['message']))
+            cursor.execute("DELETE FROM access WHERE id = %s", (request['id'], ))
+            connection.commit()
             return None
     else:
         logger().info("Invalid request {}".format(request))
