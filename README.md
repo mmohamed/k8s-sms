@@ -13,7 +13,7 @@ In this README:
 
 ----
 
-<img src="https://raw.githubusercontent.com/mmohamed/k8s-sms/master/UI/public/images/demo.gif" width="900">
+<img src="https://raw.githubusercontent.com/mmohamed/k8s-sms-ui/master/public/images/demo.gif" width="900">
 
 ---- 
 
