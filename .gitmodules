@@ -1,3 +1,6 @@
 [submodule "Helm"]
 	path = Helm
 	url = https://github.com/mmohamed/k8s-sms-helm.git
+[submodule "UI"]
+	path = UI
+	url = https://github.com/mmohamed/k8s-sms-ui.git
