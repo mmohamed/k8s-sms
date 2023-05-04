@@ -1,4 +1,4 @@
-FROM nginx
+FROM nginx:1-bullseye
 
 EXPOSE 80
 
